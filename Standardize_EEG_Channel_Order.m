@@ -1,5 +1,9 @@
 
 % 10.23.2024 by Venus
+% header_format
+% if you want the output .mat file to have the EEG_lab structure, yo should
+% define it as 'EEG_lab', if not, it will have the default format defined
+% in "edfreadUntilDone.m"
 function [reorderd_record,desiredEEGChannels] = Standardize_EEG_Channel_Order (desiredChannelOrder,removableChannels,channelsToBeReplaced, newChannelNames, ...
     signalEEG,originalChannelOrder,parentPath,channelInfoFileName,edfFileName)
 
@@ -18,7 +22,8 @@ function [reorderd_record,desiredEEGChannels] = Standardize_EEG_Channel_Order (d
 %   signalEEG - EEG data matrix (channels x time points)
 %   originalChannelOrder - Original order of EEG channel names
 %   parentPath - Path to save the channel information
-%   channelInfoFileName - Name for the channel information file
+%   channelInfoFileName - Name for the channel information file to be saved
+%   
 %   edfFileName - Name of the EDF file being processed
 %
 % Outputs:
@@ -26,7 +31,7 @@ function [reorderd_record,desiredEEGChannels] = Standardize_EEG_Channel_Order (d
 %   desiredEEGChannels - Indices of the sorted channels in the original data
 
 % Note : the order and length of channels in channelsToBeReplaced and
-% newChannelNamesshould be the same
+% newChannelNamesshould should be the same
 
 
 
@@ -39,7 +44,7 @@ if ~isempty(channelsToBeReplaced) && ~isempty(newChannelNames)
     for i = 1:length(channelsToBeReplaced)
         chan_name{1} = channelsToBeReplaced{i};
         new_chan_name = newChannelNames{i};
-        originalChannelLabels= replace_channel_names (originalChannelLabels, chan_name,  new_chan_name );
+        originalChannelLabels= Replace_Channel_Names (originalChannelLabels, chan_name,  new_chan_name );
 
     end
 end
@@ -49,49 +54,49 @@ end
 OcularChannelsPossibleNames1 = {'LUO','EEGPOLLUO','POLEOGL','POLLLC','POLLOC','EEGLOCRef', 'LOC','EOGL','LLC', 'LUE','LUOC','Reye','POLLLE',...
     'LEYE','LIO','EEGLEYERef','LOF','LEOG','POLLLE','POLLUE','LLE','EOGLT'}; %--> you did not keep thi
 desiredOcularChannelName1 = 'Eye1';
-originalChannelLabels= replace_channel_names (originalChannelLabels, OcularChannelsPossibleNames1,  desiredOcularChannelName1 );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, OcularChannelsPossibleNames1,  desiredOcularChannelName1 );
 
 
 OcularChannelsPossibleNames2 = {'RLO','EEGPOLRLO','POLEOGR','POLROC','EEGROCRef','EOGR','ROC','RAE','RUE','RLOC','Leye','POLRUE','REYE','RIO',...
     'EEGREYERef','ROF','REOG','POLRUE','POLRLE','EOGRT'};
 desiredOcularChannelName2= 'Eye2';
-originalChannelLabels= replace_channel_names (originalChannelLabels, OcularChannelsPossibleNames2,  desiredOcularChannelName2 );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, OcularChannelsPossibleNames2,  desiredOcularChannelName2 );
 
 
 ekgChannelsPossibleNames1 = {'ECGL','ECG1','ecg1','EKGL','LEKG','EEGLEKGRef','ECGLA','EEGECGLRef','EKGLT'};  %you can add 'ECGV2' for BCH too
 desiredEKGChannelName1 = 'EKG1';
-originalChannelLabels= replace_channel_names (originalChannelLabels, ekgChannelsPossibleNames1,  desiredEKGChannelName1 );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, ekgChannelsPossibleNames1,  desiredEKGChannelName1 );
 ekgChannelsPossibleNames2 = {'ECGR','ECG2','ecg2','EKGR','REKG','EEGREKGRef','ECGRA','EEGECGRRef','EKGRT'};  %you can add 'ECGV2' for BCH too
 desiredEKGChannelName2 = 'EKG2';
-originalChannelLabels= replace_channel_names (originalChannelLabels, ekgChannelsPossibleNames2,  desiredEKGChannelName2 );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, ekgChannelsPossibleNames2,  desiredEKGChannelName2 );
 ekgChannelsPossibleNames3 = {'ECG','EEGEKGRef','POLEKG','EEGPOLEKG'};
 desiredEKGChannelName3 = 'EKG';
-originalChannelLabels= replace_channel_names (originalChannelLabels, ekgChannelsPossibleNames3,  desiredEKGChannelName3);
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, ekgChannelsPossibleNames3,  desiredEKGChannelName3);
 
 emgChannelsPossibleNames = {'CHIN1','CHIN2','NECK1','NECK2','NEC1','NEC2','Lleg1','Lleg2','Rleg1','Rleg2','chin','EEGNeckRef','POLNeck1',...
     'POLNeck2','neck1','neck2','LEMG1','REMG1','EEGCHIN1Ref','EEGCHIN2Ref','POLNECK1','POLNECK2','POLChin1','POLChin2','RLEG','LLEG','EMGR','EMGL',...
     'ABD1','ABD2','EEGABD1Ref','EEGABD2Ref','CHINLT','CHINRT','ABDBLK','ABDWHT','UCHIN','LCHIN'};
 
 desiredEMGChannelName = 'EMG';
-originalChannelLabels= replace_channel_names (originalChannelLabels, emgChannelsPossibleNames,  desiredEMGChannelName );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, emgChannelsPossibleNames,  desiredEMGChannelName );
 
 % Additional standard EEG channel replacements
 otherEEGChannelsPossibleNames1 = {'T7','EEGT7Ref'}; % %you can add 'CHINz' for BCH too
 desiredEEGChannelName1 = 'T3';
-originalChannelLabels= replace_channel_names (originalChannelLabels, otherEEGChannelsPossibleNames1,  desiredEEGChannelName1 );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, otherEEGChannelsPossibleNames1,  desiredEEGChannelName1 );
 
 
 otherEEGChannelsPossibleNames2 = {'T8','EEGT8Ref'}; % %you can add 'CHINz' for BCH too
 desiredEEGChannelName2 = 'T4';
-originalChannelLabels= replace_channel_names (originalChannelLabels, otherEEGChannelsPossibleNames2,  desiredEEGChannelName2 );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, otherEEGChannelsPossibleNames2,  desiredEEGChannelName2 );
 
 otherEEGChannelsPossibleNames3 = {'P7','EEGP7Ref'}; % %you can add 'CHINz' for BCH too
 desiredEEGChannelName3 = 'T5';
-originalChannelLabels= replace_channel_names (originalChannelLabels, otherEEGChannelsPossibleNames3,  desiredEEGChannelName3 );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, otherEEGChannelsPossibleNames3,  desiredEEGChannelName3 );
 
 otherEEGChannelsPossibleNames4 = {'P8','EEGP8Ref'}; % %you can add 'CHINz' for BCH too
 desiredEEGChannelName4 = 'T6';
-originalChannelLabels= replace_channel_names (originalChannelLabels, otherEEGChannelsPossibleNames4,  desiredEEGChannelName4 );
+originalChannelLabels= Replace_Channel_Names (originalChannelLabels, otherEEGChannelsPossibleNames4,  desiredEEGChannelName4 );
 
 
 
@@ -154,7 +159,7 @@ end
 %% Find Indices and Save Channel Information
 
 % Find indices of desired channels and save updated channel labels
-[includedChannelLabels,includedChannelIndices]=find_indecies_and_channs_of_desired(originalChannelLabels,desiredChannelOrder,removableChannels);
+[includedChannelLabels,includedChannelIndices]=Find_Desired_Channels_Order_And_Indices(originalChannelLabels,desiredChannelOrder,removableChannels);
 
 % Create a cell array to store channel information
 channelInfo = cell(3,1 + length(originalChannelLabels)); % 3 columns: Original Name, New Name, Skipped
@@ -235,7 +240,7 @@ desiredEEGChannels = signalEEG(includedChannelIndices,:);
 
 [~, desiredEEGChannels] = ismember (desiredChannelOrder,includedChannelLabels);
 if any(desiredEEGChannels ==0)
-    desiredEEGChannels =  find_sorted_indecies(includedChannelLabels,desiredChannelOrder);
+    desiredEEGChannels =  Find_Sorted_indices(includedChannelLabels,desiredChannelOrder);
 end
 
 
@@ -248,9 +253,9 @@ end
 
 %% subfunctions
 
-function [includedChannelOrder,includedChannelIndices] = find_indecies_and_channs_of_desired(channelLabels,desiredOrder,removableChannels)
+function [includedChannelOrder,includedChannelIndices] = Find_Desired_Channels_Order_And_Indices(channelLabels,desiredOrder,removableChannels)
 
- % FIND_INDICIES_AND_CHANNS_OF_DESIRED Finds indices of desired channels
+ % FIND_DESIRED_CHANNELS_ORDER_AND_INDICES Finds indices of desired channels
     %
     % This function identifies channels that match the desired order and are not removable.
     % It returns the order and indices of these channels.
@@ -298,12 +303,12 @@ includedChannelOrder = channelLabels(includedChannelIndices);
 
 end
 
-function [sortedIndices] = find_sorted_indecies (EEG_remaining_channel_labels,desiredOrder)
-% FIND_SORTED_INDICIES Finds sorted indices of channels based on desired order
+function [sortedIndices] = Find_Sorted_indices (EEG_remaining_channel_labels,desiredOrder)
+% FIND_SORTED_INDICES Finds sorted indices of channels based on desired order
     %
     % This function finds the indices of channels in the desired order, even if the direct match is not found.
 
-sortedIndices = []; %sometimes the ismemeber does not work, so we go through this loop to find the indecies based on our desired order
+sortedIndices = []; %sometimes the ismemeber does not work, so we go through this loop to find the indices based on our desired order
 k = 1;
 for i = 1: numel(desiredOrder)
     lower_desiredOrder = lower(desiredOrder{i});
@@ -321,7 +326,7 @@ end
 
 
 
-function [outputChannelNames] = replace_channel_names (originalChannelNames, channelsToBeReplace, replacement_channel)
+function [outputChannelNames] = Replace_Channel_Names (originalChannelNames, channelsToBeReplace, replacement_channel)
     % REPLACE_CHANNEL_NAMES Replaces specified channel names with new names
     %
     % This function replaces any occurrence of specified channels with a new name.
