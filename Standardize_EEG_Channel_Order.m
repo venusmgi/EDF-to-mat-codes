@@ -153,8 +153,8 @@ function [includedChannelOrder,includedChannelIndices] = Find_Desired_Channels_O
 %     end
 
 for i = 1:length(channelLabels)
-    contains_required_channels = contains(lower(channelLabels(1,i)) , lower(desiredOrder) );
-    does_not_contain_removableChannels = ~( contains (channelLabels(1,i) ,removableChannels));
+    contains_required_channels = contains(lower(channelLabels{i}) , lower(desiredOrder) );
+    does_not_contain_removableChannels = ~( contains (channelLabels{i} ,removableChannels));
     includedChannelIndices(:,i) =  contains_required_channels && does_not_contain_removableChannels;
 end
 
