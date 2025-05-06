@@ -34,6 +34,11 @@ function [reorderd_record,desiredEEGChannels] = Standardize_EEG_Channel_Order (d
 % newChannelNamesshould should be the same
 
 
+
+% Assert that the number of channels to be replaced matches the new names
+assert (length(channelsToBeReplaced)==length(newChannelNames),'number of channels that are being replaced and their new names should be the same')
+
+
 originalChannelLabels= originalChannelOrder;  % Copy original channel labels
 
 %replacing any of the channels that are in the removableChannels, with
@@ -44,9 +49,6 @@ for i = 1:length(removableChannels)
         originalChannelOrder{removableChannelIdx} = 'unusable';
     end
 end
-
-% Assert that the number of channels to be replaced matches the new names
-assert (length(channelsToBeReplaced)==length(newChannelNames),'number of channels that are being replaced and their new names should be the same')
 %% standardizing the Channel names
 
 % Replace incorrectly named channels with new names
@@ -102,78 +104,10 @@ end
 %% Find Indices and Save Channel Information
 
 % Find indices of desired channels and save updated channel labels
+
 [includedChannelLabels,includedChannelIndices]=Find_Desired_Channels_Order_And_Indices(originalChannelLabels,desiredChannelOrder,removableChannels);
+Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,parentPath,channelInfoFileName)
 
-% Create a cell array to store channel information
-channelInfo = cell(3,1 + length(originalChannelLabels)); % 3 columns: Original Name, New Name, Skipped
-row1Name = edfFileName;
-row2Name = strcat('New',' ',edfFileName);
-row3Name = strcat('Reordered',' ',edfFileName);
-
-% Fill in the header
-channelInfo(:,1) = {row1Name, row2Name,row3Name};
-
-% Fill in the data
-for i = 1:length(originalChannelOrder)
-    channelInfo{ 1,i + 1} = originalChannelOrder{i};
-
-    % Check if the channel was renamed
-    if any(includedChannelIndices == i)
-        channelInfo{2, i + 1} = includedChannelLabels{includedChannelIndices == i};
-        channelInfo{3, i+1}= desiredChannelOrder{includedChannelIndices == i};
-
-
-    else
-        channelInfo{2, i + 1} = '';
-        channelInfo{3, i+1}= '';
-    end
-end
-
-% Save the channel information to a .mat file
-excelSheetPath = strcat(parentPath,'\',channelInfoFileName,'.mat');
-% Check if the file already exists
-if exist(excelSheetPath) == 2
-    % Load existing data
-    existingData = load(excelSheetPath);
-
-
-    previousEDFnames = existingData.channelInfo(:,1);
-    currentEDFname = channelInfo(1,1);
-
-    % finding if this current edf has already been processed and the ibnfo
-    % has been saved inthe ecel sheet. If this info is already availabe
-    % in the excel sheet, remove that edf and an other edf after that, 
-    % because the rest of the files will be processed again
-
-    EDFtoRemove =  find(strcmp(previousEDFnames, currentEDFname), 1, 'first');
-    if ~isempty(EDFtoRemove)
-        existingData.channelInfo(EDFtoRemove:end,:) =[];
-    end
-
-    % Ensure the new and existing data have the same number of columns
-    numColumns1 = size(channelInfo,2);
-    numColumns2 = size(existingData.channelInfo,2);
-    %checks to see if the size of the new channel info is the same
-    %as the uploaded on, if not, padds to be the same size
-    if numColumns2 > numColumns1
-        % Pad cellArray2 with empty cells
-        padding = cell(size(channelInfo, 1), numColumns2 - numColumns1);
-        channelInfo = [channelInfo, padding];
-    elseif numColumns2 < numColumns1
-        padding = cell(size(existingData.channelInfo, 1), numColumns1 - numColumns2);
-        existingData.channelInfo = [existingData.channelInfo, padding];
-    end
-
-    % Append the new data
-    channelInfo = [existingData.channelInfo; channelInfo];
-
-
-    % Write the updated data to the Excel file
-    save(excelSheetPath,'channelInfo')
-else
-    % Write the data to a new Excel file
-    save(excelSheetPath,'channelInfo');
-end
 
 
 %% Reorder EEG Record
@@ -246,6 +180,9 @@ includedChannelOrder = channelLabels(includedChannelIndices);
 
 end
 
+
+
+
 function [sortedIndices] = Find_Sorted_indices (EEG_remaining_channel_labels,desiredOrder)
 % FIND_SORTED_INDICES Finds sorted indices of channels based on desired order
     %
@@ -274,26 +211,26 @@ function [outputChannelNames] = Replace_Channel_Names (originalChannelNames, cha
     %
     % This function replaces any occurrence of specified channels with a new name.
 
-for j = 1:length(channelsToBeReplace)
-
-    % checks if any of the possible other names of the channels that
-    % should be replaced exists in the channel names
-    if any(strcmp(originalChannelNames, channelsToBeReplace{j}))
-        % replaces that channels with the defined  channel name
-        if sum(strcmp(originalChannelNames, channelsToBeReplace{j})) ==1
-            originalChannelNames{strcmp(originalChannelNames, channelsToBeReplace{j})} = replacement_channel;
-        else
-
-            IdxToBeReplaced =  find(strcmp(originalChannelNames, channelsToBeReplace{j}));
-            for i = 1:length(IdxToBeReplaced)
-                originalChannelNames{IdxToBeReplaced(i)} = replacement_channel;
+    for j = 1:length(channelsToBeReplace)
+    
+        % checks if any of the possible other names of the channels that
+        % should be replaced exists in the channel names
+        if any(strcmp(originalChannelNames, channelsToBeReplace{j}))
+            % replaces that channels with the defined  channel name
+            if sum(strcmp(originalChannelNames, channelsToBeReplace{j})) ==1
+                originalChannelNames{strcmp(originalChannelNames, channelsToBeReplace{j})} = replacement_channel;
+            else
+    
+                IdxToBeReplaced =  find(strcmp(originalChannelNames, channelsToBeReplace{j}));
+                for i = 1:length(IdxToBeReplaced)
+                    originalChannelNames{IdxToBeReplaced(i)} = replacement_channel;
+                end
             end
         end
+    
     end
-
-end
-
-outputChannelNames = originalChannelNames;
+    
+    outputChannelNames = originalChannelNames;
 
 end
 
@@ -344,4 +281,119 @@ function [newLabel,channelCounters] = standardizeChannelName(channelLabel, chann
 
 
 
+end
+
+
+
+function paddedArray = Pad_Cell_Array(cellArray, numRows, numColumns)
+    % PADCELLARRAY Pads a cell array with empty cells to match desired dimensions
+    %
+    % Inputs:
+    %   cellArray - The cell array to pad
+    %   numRows - Number of rows in the padded array
+    %   numColumns - Number of columns in the padded array
+    %
+    % Outputs:
+    %   paddedArray - The padded cell array
+    
+    % Create padding of empty cells
+    padding = cell(numRows, numColumns - size(cellArray, 2));
+    
+    % Combine original array with padding
+    paddedArray = [cellArray, padding];
+end
+% Ensure the new and existing data have the same number of columns
+
+function newChannelInfo = Append_New_ChannInfo (newChannelInfo, existingChannelInfo)
+
+    numColumnsChannInfo = size(newChannelInfo,2);
+    numColumnsExistingChans = size(existingChannelInfo,2);
+    %checks to see if the size of the new channel info is the same
+    %as the uploaded on, if not, padds to be the same size
+
+    if numColumnsExistingChans > numColumnsChannInfo
+        % Pad channelInfo with empty cells to match existingChannelInfo
+        newChannelInfo = Pad_Cell_Array(newChannelInfo, size(newChannelInfo, 1), numColumnsExistingChans);
+    elseif numColumnsExistingChans < numColumnsChannInfo
+        % Pad existingChannelInfo with empty cells to match channelInfo
+        existingChannelInfo = Pad_Cell_Array(existingChannelInfo, size(existingChannelInfo, 1), numColumnsChannInfo);
+    end
+
+
+    % Append the new data
+    newChannelInfo = [existingChannelInfo; newChannelInfo];
+end
+
+
+
+function Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,parentPath,channelInfoFileName)
+    % Create a cell array to store channel information
+    numChannels = length(originalChannelOrder);
+    channelInfo = cell(3,1 + numChannels); % 3 rows: Original Name, New Name, Reordered Name
+    
+    % Set row headers
+    channelInfo(:,1) = {edfFileName;
+       strcat('New',' ',edfFileName); 
+       strcat('Reordered',' ',edfFileName)
+       };
+    
+    
+    
+    % Fill in channel info
+    for i = 1:length(originalChannelOrder)
+        channelInfo{ 1,i + 1} = originalChannelOrder{i};
+    
+        % Check if the channel was renamed
+        if any(includedChannelIndices == i)
+            channelInfo{2, i + 1} = includedChannelLabels{includedChannelIndices == i};
+            channelInfo{3, i+1}= desiredChannelOrder{includedChannelIndices == i};
+    
+    
+        else % skip this channel
+            channelInfo{2, i + 1} = '';
+            channelInfo{3, i+1}= '';
+        end
+    end
+    
+    % % 
+    % % % Save the channel information to a .mat file
+    % % excelSheetPath2 = strcat(parentPath,'\',channelInfoFileName,'.mat');
+    
+    % Define path to Excel sheet as a .mat file
+      excelSheetPath = fullfile(parentPath, strcat(channelInfoFileName, '.mat'));
+    
+    % % % Check if the file already exists
+    % % if exist(excelSheetPath) == 2
+    
+    
+    % Load existing channel information if the file exists
+        if isfile(excelSheetPath)
+    
+    
+        % Load existing data
+        existingData = load(excelSheetPath);
+        existingChannelInfo = existingData.channelInfo;
+    
+        previousEDFnames = existingChannelInfo(:,1);
+    
+    
+        currentEDFname = channelInfo(1,1);
+    
+        % finding if this current edf has already been processed and the info
+        % has been saved inthe ecel sheet. If this info is already availabe
+        % in the excel sheet, remove that edf and an other edf after that, 
+        % because the rest of the files will be processed again
+    
+        EDFtoRemove =  find(strcmp(previousEDFnames, currentEDFname), 1, 'first');
+        if ~isempty(EDFtoRemove)
+            existingChannelInfo(EDFtoRemove:end,:) =[];
+        end
+    
+    
+        channelInfo = Append_New_ChannInfo (channelInfo, existingChannelInfo);
+
+
+        % Write the data to a new Excel file
+        save(excelSheetPath,'channelInfo');
+    end
 end
