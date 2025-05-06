@@ -38,14 +38,11 @@ originalChannelLabels= originalChannelOrder;  % Copy original channel labels
 
 %replacing any of the channels that are in the removableChannels, with
 %'unusable'
-
 for i = 1:length(removableChannels)
     if any(contains(originalChannelOrder,removableChannels{i}))
         removableChannelIdx = contains(originalChannelOrder,removableChannels{i});
         originalChannelOrder{removableChannelIdx} = 'unusable';
     end
-
-
 end
 
 % Assert that the number of channels to be replaced matches the new names
@@ -88,61 +85,17 @@ for k = 1:length(channelMappings)
 end
 
 
-originalChannelLabels2 = originalChannelLabels;
+
 %% %% Renaming and Counting Channels (EKGs with EKG1 and EKG2, and EMGs with EMG1 and EMG2)
 
-%% add a matrix that says how many
-% Initialize counters
-ekgCounter = 0;
-emgCounter = 0;
-fzCounter = 0;
-o1Counter = 0;
-o2Counter = 0;
+channelCounters = struct('EMG', 0, 'EKG', 0, 'Fz', 0, 'O1', 0, 'O2', 0);
+% Initialize a struct to hold channel name counters
+
 
 % Iterate through the channel names to standardize and count them
 for i = 1:length(originalChannelLabels)
-
-    if contains(originalChannelLabels{i}, 'EMG')
-        emgCounter = emgCounter + 1;
-        originalChannelLabels{i} = ['EMG' num2str(emgCounter)];
-
-    elseif  matches(originalChannelLabels{i},'EKG') % why did I use matches instead of contains? 
-        ekgCounter = ekgCounter + 1;
-        originalChannelLabels{i} = ['EKG' num2str(ekgCounter)];
-
-    elseif contains(originalChannelLabels{i}, 'Fz')
-        fzCounter = fzCounter + 1;
-
-        if fzCounter ==1
-            originalChannelLabels{i} = 'Fz';
-        else
-            originalChannelLabels{i} = ['Fz' num2str(fzCounter)];
-        end
-    elseif contains(originalChannelLabels{i}, 'O1')
-        o1Counter = o1Counter + 1;
-
-        if o1Counter ==1
-            originalChannelLabels{i} = 'O1';
-        else
-            originalChannelLabels{i} = ['O1' num2str(o1Counter)];
-        end
-
-
-    elseif contains(originalChannelLabels{i}, 'O2')
-        o2Counter = o2Counter + 1;
-
-
-        if o2Counter ==1
-            originalChannelLabels{i} = 'O2';
-        else
-            originalChannelLabels{i} = ['O2' num2str(o2Counter)];
-        end
-
-
-    end
-
+    [originalChannelLabels{i},channelCounters] = standardizeChannelName(originalChannelLabels{i}, channelCounters);
 end
-
 
 
 
@@ -344,3 +297,51 @@ outputChannelNames = originalChannelNames;
 
 end
 
+function [newLabel,channelCounters] = standardizeChannelName(channelLabel, channelCounters)
+
+% STANDARDIZECHANNELNAME Renames EEG channels to ensure standardized naming conventions.
+%
+% This function adjusts channel names to add numerical suffixes to duplicate channels,
+% ensuring that each channel has a unique name. For main EEG channels like 'O1', 'O2', and 'Fz',
+% the base name is preserved for the first occurrence without adding a numerical suffix.
+%
+% Inputs:
+%   channelLabel - The original label of the EEG channel.
+%   channelCounters - A struct containing counters for each channel type
+%                     (e.g., 'EMG',0, 'EKG',0, 'Fz', 1, 'O1', 1, 'O2', 0), 
+%                       which tracks the number of occurrences of each channel type.
+%
+% Outputs:
+%   newLabel - The standardized channel label. If the channel is a duplicate,
+%              it includes a number suffix (e.g., 'EMG1', 'EMG2').
+%   channelCounters - Updated struct with the incremented counters for each channel type.
+
+
+    
+    % Define the channel names of interest
+    channelNames = {'EMG', 'EKG', 'Fz', 'O1', 'O2'};
+
+    % Loop through each channel name to check if the current label matches any known types
+    for i = 1:length(channelNames)
+         channelName = channelNames{i};
+
+        if contains(channelLabel,channelName)
+             % Update the counter for the channel
+            channelCounters.(channelName) = channelCounters.(channelName) + 1;
+             % For the main EEG channels ('O1', 'O2', 'Fz'), preserve the base name without a
+            % number for the first encounter, as they are standard electrode names
+            if (strcmp(channelName,'O1') || strcmp(channelName,'O2') ||strcmp(channelName,'Fz')) && channelCounters.(channelName) == 1
+                newLabel = channelName; % Preserve the base name without number for the first instance
+            else
+                % Append a numeral suffix for duplicate or non-main channels
+               newLabel = [channelName num2str(channelCounters.(channelName))]; 
+            end
+            return;
+        end
+    end
+    % Return the unchanged label if no matching channel name is found
+    newLabel = channelLabel;
+
+
+
+end
