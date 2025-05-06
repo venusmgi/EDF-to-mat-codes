@@ -34,11 +34,24 @@ function [reorderd_record,desiredEEGChannels] = Standardize_EEG_Channel_Order (d
 % newChannelNamesshould should be the same
 
 
+originalChannelLabels= originalChannelOrder;  % Copy original channel labels
+
+%replacing any of the channels that are in the removableChannels, with
+%'unusable'
+
+for i = 1:length(removableChannels)
+    if any(contains(originalChannelOrder,removableChannels{i}))
+        removableChannelIdx = contains(originalChannelOrder,removableChannels{i});
+        originalChannelOrder{removableChannelIdx} = 'unusable';
+    end
+
+
+end
 
 % Assert that the number of channels to be replaced matches the new names
 assert (length(channelsToBeReplaced)==length(newChannelNames),'number of channels that are being replaced and their new names should be the same')
 %% standardizing the Channel names
-originalChannelLabels= originalChannelOrder;  % Copy original channel labels
+
 % Replace incorrectly named channels with new names
 if ~isempty(channelsToBeReplaced) && ~isempty(newChannelNames)
     for i = 1:length(channelsToBeReplaced)
@@ -50,56 +63,32 @@ if ~isempty(channelsToBeReplaced) && ~isempty(newChannelNames)
 end
 
 
-% Define possible names for ocular, EKG, and EMG channels and standardize them
-OcularChannelsPossibleNames1 = {'LUO','EEGPOLLUO','POLEOGL','POLLLC','POLLOC','EEGLOCRef', 'LOC','EOGL','LLC', 'LUE','LUOC','Reye','POLLLE',...
-    'LEYE','LIO','EEGLEYERef','LOF','LEOG','POLLLE','POLLUE','LLE','EOGLT'}; %--> you did not keep thi
-desiredOcularChannelName1 = 'Eye1';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, OcularChannelsPossibleNames1,  desiredOcularChannelName1 );
-
-
-OcularChannelsPossibleNames2 = {'RLO','EEGPOLRLO','POLEOGR','POLROC','EEGROCRef','EOGR','ROC','RAE','RUE','RLOC','Leye','POLRUE','REYE','RIO',...
+% Define mappings for possible channel names and their desired replacements
+channelMappings = {'Eye1',{'LUO','EEGPOLLUO','POLEOGL','POLLLC','POLLOC','EEGLOCRef', 'LOC','EOGL','LLC', 'LUE','LUOC','Reye','POLLLE',...
+    'LEYE','LIO','EEGLEYERef','LOF','LEOG','POLLLE','POLLUE','LLE','EOGLT'};
+    'Eye2',{'RLO','EEGPOLRLO','POLEOGR','POLROC','EEGROCRef','EOGR','ROC','RAE','RUE','RLOC','Leye','POLRUE','REYE','RIO',...
     'EEGREYERef','ROF','REOG','POLRUE','POLRLE','EOGRT'};
-desiredOcularChannelName2= 'Eye2';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, OcularChannelsPossibleNames2,  desiredOcularChannelName2 );
+    'EKG1',{'ECGL','ECG1','ecg1','EKGL','LEKG','EEGLEKGRef','ECGLA','EEGECGLRef','EKGLT'};
+    'EKG2',{'ECGR','ECG2','ecg2','EKGR','REKG','EEGREKGRef','ECGRA','EEGECGRRef','EKGRT'};
+    'EKG',{'ECG','EEGEKGRef','POLEKG','EEGPOLEKG'};
+    'EMG',{'CHIN1','CHIN2','NECK1','NECK2','NEC1','NEC2','Lleg1','Lleg2','Rleg1','Rleg2','chin','EEGNeckRef','POLNeck1',...
+    'POLNeck2','neck1','neck2','LEMG1','REMG1','EEGCHIN1Ref','EEGCHIN2Ref','POLNECK1','POLNECK2','POLChin1','POLChin2','RLEG',...
+    'LLEG','EMGR','EMGL','ABD1','ABD2','EEGABD1Ref','EEGABD2Ref','CHINLT','CHINRT','ABDBLK','ABDWHT','UCHIN','LCHIN'};
+    'T3',{'T7','EEGT7Ref'};
+     'T4',{'T8','EEGT8Ref'};
+    'T5',{'P7','EEGP7Ref'} ;
+    'T6', {'P8','EEGP8Ref'} 
+    };
+
+%applying the channel maps
+for k = 1:length(channelMappings)
+        desiredName = channelMappings{k, 1};
+        possibleNames = channelMappings{k, 2};
+        originalChannelLabels= Replace_Channel_Names (originalChannelLabels, possibleNames,  desiredName );
+end
 
 
-ekgChannelsPossibleNames1 = {'ECGL','ECG1','ecg1','EKGL','LEKG','EEGLEKGRef','ECGLA','EEGECGLRef','EKGLT'};  %you can add 'ECGV2' for BCH too
-desiredEKGChannelName1 = 'EKG1';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, ekgChannelsPossibleNames1,  desiredEKGChannelName1 );
-ekgChannelsPossibleNames2 = {'ECGR','ECG2','ecg2','EKGR','REKG','EEGREKGRef','ECGRA','EEGECGRRef','EKGRT'};  %you can add 'ECGV2' for BCH too
-desiredEKGChannelName2 = 'EKG2';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, ekgChannelsPossibleNames2,  desiredEKGChannelName2 );
-ekgChannelsPossibleNames3 = {'ECG','EEGEKGRef','POLEKG','EEGPOLEKG'};
-desiredEKGChannelName3 = 'EKG';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, ekgChannelsPossibleNames3,  desiredEKGChannelName3);
-
-emgChannelsPossibleNames = {'CHIN1','CHIN2','NECK1','NECK2','NEC1','NEC2','Lleg1','Lleg2','Rleg1','Rleg2','chin','EEGNeckRef','POLNeck1',...
-    'POLNeck2','neck1','neck2','LEMG1','REMG1','EEGCHIN1Ref','EEGCHIN2Ref','POLNECK1','POLNECK2','POLChin1','POLChin2','RLEG','LLEG','EMGR','EMGL',...
-    'ABD1','ABD2','EEGABD1Ref','EEGABD2Ref','CHINLT','CHINRT','ABDBLK','ABDWHT','UCHIN','LCHIN'};
-
-desiredEMGChannelName = 'EMG';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, emgChannelsPossibleNames,  desiredEMGChannelName );
-
-% Additional standard EEG channel replacements
-otherEEGChannelsPossibleNames1 = {'T7','EEGT7Ref'}; % %you can add 'CHINz' for BCH too
-desiredEEGChannelName1 = 'T3';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, otherEEGChannelsPossibleNames1,  desiredEEGChannelName1 );
-
-
-otherEEGChannelsPossibleNames2 = {'T8','EEGT8Ref'}; % %you can add 'CHINz' for BCH too
-desiredEEGChannelName2 = 'T4';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, otherEEGChannelsPossibleNames2,  desiredEEGChannelName2 );
-
-otherEEGChannelsPossibleNames3 = {'P7','EEGP7Ref'}; % %you can add 'CHINz' for BCH too
-desiredEEGChannelName3 = 'T5';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, otherEEGChannelsPossibleNames3,  desiredEEGChannelName3 );
-
-otherEEGChannelsPossibleNames4 = {'P8','EEGP8Ref'}; % %you can add 'CHINz' for BCH too
-desiredEEGChannelName4 = 'T6';
-originalChannelLabels= Replace_Channel_Names (originalChannelLabels, otherEEGChannelsPossibleNames4,  desiredEEGChannelName4 );
-
-
-
+originalChannelLabels2 = originalChannelLabels;
 %% %% Renaming and Counting Channels (EKGs with EKG1 and EKG2, and EMGs with EMG1 and EMG2)
 
 %% add a matrix that says how many
@@ -117,7 +106,7 @@ for i = 1:length(originalChannelLabels)
         emgCounter = emgCounter + 1;
         originalChannelLabels{i} = ['EMG' num2str(emgCounter)];
 
-    elseif  matches(originalChannelLabels{i},"EKG")
+    elseif  matches(originalChannelLabels{i},'EKG') % why did I use matches instead of contains? 
         ekgCounter = ekgCounter + 1;
         originalChannelLabels{i} = ['EKG' num2str(ekgCounter)];
 
@@ -135,7 +124,7 @@ for i = 1:length(originalChannelLabels)
         if o1Counter ==1
             originalChannelLabels{i} = 'O1';
         else
-            originalChannelLabels{i} = ['O1' num2str(fzCounter)];
+            originalChannelLabels{i} = ['O1' num2str(o1Counter)];
         end
 
 
@@ -146,13 +135,14 @@ for i = 1:length(originalChannelLabels)
         if o2Counter ==1
             originalChannelLabels{i} = 'O2';
         else
-            originalChannelLabels{i} = ['O2' num2str(fzCounter)];
+            originalChannelLabels{i} = ['O2' num2str(o2Counter)];
         end
 
 
     end
 
 end
+
 
 
 
