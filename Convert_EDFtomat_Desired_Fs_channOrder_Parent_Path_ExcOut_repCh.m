@@ -35,7 +35,7 @@ end
 
 if nargin <7 
     selection_mode = questdlg('Select a processing Mode:', 'Processing Mode', ...
-        'ParentPath', 'EDF');
+        'ParentPath', 'EDF','ParentPath');
 end
 
 switch lower(selection_mode)
@@ -68,7 +68,7 @@ switch lower(selection_mode)
 case 'edf'
     [fileNames, filePath] = uigetfile('*.edf', 'Select EDF file(s)', 'MultiSelect', 'on');
     
-    if fileNames == 0
+    if isequal(fileNames,0)
         fprintf('Operation canceled by the user.\n')
         return;
     end
