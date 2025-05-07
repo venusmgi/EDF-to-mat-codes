@@ -5,7 +5,7 @@
 % define it as 'EEG_lab', if not, it will have the default format defined
 % in "edfreadUntilDone.m"
 function [reorderd_record,desiredEEGChannelsIdx] = Standardize_EEG_Channel_Order (desiredChannelOrder,removableChannels,channelsToBeReplaced, newChannelNames, ...
-    signalEEG,originalChannelOrder,parentPath,channelInfoFileName,edfFileName)
+    signalEEG,originalChannelOrder,PathToSaveChannelInfo,channelInfoFileName,edfFileName)
 
 % Previoulsy was called Get_desiredChannelOrder_excelOutput_replacing_input
 % STANDARDIZE_EEG_CHANNEL_ORDER Reorders and standardizes EEG channel names and data
@@ -22,7 +22,7 @@ function [reorderd_record,desiredEEGChannelsIdx] = Standardize_EEG_Channel_Order
 %   newChannelNames - Cell array of new names for channels to be replaced
 %   signalEEG - Numeric matrix of EEG data (channels x time points)
 %   originalChannelOrder - Cell array of original channel names
-%   parentPath - String path where output files will be saved
+%   PathToSaveChannelInfo - String path where output files will be saved
 %   channelInfoFileName - String name for the output Excel file
 %   (suggestion, use different names each time you run this function, and
 %   then concatante the resultsto have a single file)
@@ -58,7 +58,7 @@ end
 if ~iscell(originalChannelOrder) || isempty(originalChannelOrder)
     error('originalChannelOrder must be a non-empty cell array');
 end
-if ~ischar(parentPath) || ~ischar(channelInfoFileName) || ~ischar(edfFileName)
+if ~ischar(PathToSaveChannelInfo) || ~ischar(channelInfoFileName) || ~ischar(edfFileName)
     error('parentPath, channelInfoFileName, and edfFileName must be character arrays');
 end
 
@@ -140,7 +140,7 @@ end
 % Find indices of desired channels and save updated channel labels
 
 [includedChannelLabels,includedChannelIndices]=Find_Desired_Channels_Order_And_Indices(originalChannelLabels,desiredChannelOrder,removableChannels);
-Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,parentPath,channelInfoFileName)
+Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,PathToSaveChannelInfo,channelInfoFileName)
 
 
 
@@ -338,7 +338,7 @@ end
 
 
 
-function Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,parentPath,channelInfoFileName)
+function Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,PathToSaveChannelInfo,channelInfoFileName)
 % Create a cell array to store channel information
 numChannels = length(originalChannelOrder);
 channelInfo = cell(3,1 + numChannels); % 3 rows: Original Name, New Name, Reordered Name
@@ -368,7 +368,7 @@ for i = 1:length(originalChannelOrder)
 end
 
 % Define path to Excel sheet as a .mat file
-excelSheetPath = fullfile(parentPath, strcat(channelInfoFileName, '.mat'));
+excelSheetPath = fullfile(PathToSaveChannelInfo, strcat(channelInfoFileName, '.mat'));
 
 % Load existing channel information if the file exists
 if isfile(excelSheetPath)
