@@ -4,7 +4,7 @@
 % if you want the output .mat file to have the EEG_lab structure, yo should
 % define it as 'EEG_lab', if not, it will have the default format defined
 % in "edfreadUntilDone.m"
-function [reorderd_record,desiredEEGChannels] = Standardize_EEG_Channel_Order (desiredChannelOrder,removableChannels,channelsToBeReplaced, newChannelNames, ...
+function [reorderd_record,desiredEEGChannelsIdx] = Standardize_EEG_Channel_Order (desiredChannelOrder,removableChannels,channelsToBeReplaced, newChannelNames, ...
     signalEEG,originalChannelOrder,parentPath,channelInfoFileName,edfFileName)
 
 % Previoulsy was called Get_desiredChannelOrder_excelOutput_replacing_input
@@ -24,6 +24,8 @@ function [reorderd_record,desiredEEGChannels] = Standardize_EEG_Channel_Order (d
 %   originalChannelOrder - Cell array of original channel names
 %   parentPath - String path where output files will be saved
 %   channelInfoFileName - String name for the output Excel file
+%   (suggestion, use different names each time you run this function, and
+%   then concatante the resultsto have a single file)
 %   edfFileName - String name of the input EDF file
 %
 % Outputs:
@@ -145,17 +147,20 @@ Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,i
 %% Reorder EEG Record
 % Reorder the EEG data according to the desired channel order
 
-desiredEEGChannels = signalEEG(includedChannelIndices,:);
 
-[~, desiredEEGChannels] = ismember (desiredChannelOrder,includedChannelLabels);
-if any(desiredEEGChannels ==0)
-    desiredEEGChannels =  Find_Sorted_indices(includedChannelLabels,desiredChannelOrder);
+
+ recordDesiredChanns = signalEEG(includedChannelIndices,:);
+
+
+[~, desiredEEGChannelsIdx] = ismember (desiredChannelOrder,includedChannelLabels);
+if any(desiredEEGChannelsIdx ==0)
+    desiredEEGChannelsIdx =  Find_Sorted_indices(includedChannelLabels,desiredChannelOrder);
 end
 
 
 
 % Save the reordered EEG record
-reorderd_record = desiredEEGChannels(desiredEEGChannels,:);
+reorderd_record = recordDesiredChanns(desiredEEGChannelsIdx,:);
 end
 
 
@@ -331,26 +336,6 @@ paddedArray = [cellArray, padding];
 end
 % Ensure the new and existing data have the same number of columns
 
-function newChannelInfo = Append_New_ChannInfo (newChannelInfo, existingChannelInfo)
-
-numColumnsChannInfo = size(newChannelInfo,2);
-numColumnsExistingChans = size(existingChannelInfo,2);
-%checks to see if the size of the new channel info is the same
-%as the uploaded on, if not, padds to be the same size
-
-if numColumnsExistingChans > numColumnsChannInfo
-    % Pad channelInfo with empty cells to match existingChannelInfo
-    newChannelInfo = Pad_Cell_Array(newChannelInfo, size(newChannelInfo, 1), numColumnsExistingChans);
-elseif numColumnsExistingChans < numColumnsChannInfo
-    % Pad existingChannelInfo with empty cells to match channelInfo
-    existingChannelInfo = Pad_Cell_Array(existingChannelInfo, size(existingChannelInfo, 1), numColumnsChannInfo);
-end
-
-
-% Append the new data
-newChannelInfo = [existingChannelInfo; newChannelInfo];
-end
-
 
 
 function Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,parentPath,channelInfoFileName)
@@ -403,16 +388,46 @@ if isfile(excelSheetPath)
     % in the excel sheet, remove that edf and an other edf after that,
     % because the rest of the files will be processed again
 
+    % TODO : right now, if there is a file, with the same name as it is in
+    % the input, it will load that file, and if it does not find a matching
+    % name, it will keep everything, but maybe, some EDFs have been skipped
+    % before, and now that we are processing them, they will be done again
+    % (imagin that the excel sheet has only info on the 3rd edf in a file,
+    % and we start the process from begining, at fisrt, because the fisrt 
+    % edf is beign processed, it cannot find the name of the 3rd one, and
+    % does the process, until it reaches the third one, then it will remove
+    % all the process, because it found the name of the third, and removed
+    % everything after, which might be the first or second one.
     EDFtoRemove =  find(strcmp(previousEDFnames, currentEDFname), 1, 'first');
     if ~isempty(EDFtoRemove)
         existingChannelInfo(EDFtoRemove:end,:) =[];
     end
-
-
     channelInfo = Append_New_ChannInfo (channelInfo, existingChannelInfo);
 
+end
+   
 
     % Write the data to a new Excel file
     save(excelSheetPath,'channelInfo');
 end
+
+
+function newChannelInfo = Append_New_ChannInfo (newChannelInfo, existingChannelInfo)
+
+numColumnsChannInfo = size(newChannelInfo,2);
+numColumnsExistingChans = size(existingChannelInfo,2);
+%checks to see if the size of the new channel info is the same
+%as the uploaded on, if not, padds to be the same size
+
+if numColumnsExistingChans > numColumnsChannInfo
+    % Pad channelInfo with empty cells to match existingChannelInfo
+    newChannelInfo = Pad_Cell_Array(newChannelInfo, size(newChannelInfo, 1), numColumnsExistingChans);
+elseif numColumnsExistingChans < numColumnsChannInfo
+    % Pad existingChannelInfo with empty cells to match channelInfo
+    existingChannelInfo = Pad_Cell_Array(existingChannelInfo, size(existingChannelInfo, 1), numColumnsChannInfo);
+end
+
+
+% Append the new data
+newChannelInfo = [existingChannelInfo; newChannelInfo];
 end
