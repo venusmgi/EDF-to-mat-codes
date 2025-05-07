@@ -3,7 +3,8 @@
 % define it as 'EEG_lab', if not, it will have the default format defined
 % in "edfreadUntilDone.m"
 
-function Convert_EDFtomat_Desired_Fs_channOrder_Parent_Path_ExcOut_repCh (desired_sampling_rate,desired_channel_order,removable_channels, channel_tobe_replaced, new_channel_names,chann_info_name,header_format)
+function Convert_EDFtomat_Desired_Fs_channOrder_Parent_Path_ExcOut_repCh (desired_sampling_rate,desired_channel_order,removable_channels, channel_tobe_replaced, ...
+    new_channel_names,chann_info_name,selection_mode, header_format)
 % CONVERT_EDF2MAT Converts a single EDF file to MAT format with specified parameters
 %
 % This function converts an EDF file to MAT format, reordering channels and
@@ -28,37 +29,74 @@ function Convert_EDFtomat_Desired_Fs_channOrder_Parent_Path_ExcOut_repCh (desire
 functionPath = pwd;
 addpath(functionPath)
 
-if nargin < 7
+if nargin < 8
     header_format = '';  % Default value (regular header format)
 end
 
-ParentPath = uigetdir;
-patient_folders = Find_folders(ParentPath);
+if nargin <7 
+    selection_mode = questdlg('Select a processing Mode:', 'Processing Mode', ...
+        'ParentPath', 'EDF');
+end
 
-% Process each patient folder
-for i = 1:length(patient_folders)
-    fprintf('Processing patient folder: %s\n', patient_folders{i});
-    
-    % Process diagnosis folder
-    ProcessFolder(ParentPath, patient_folders{i}, 'diagnosis', desired_sampling_rate, ...
-        desired_channel_order, removable_channels, channel_tobe_replaced, ...
-        new_channel_names, header_format, chann_info_name);
-    
-    % Process follow-up folder
-    ProcessFolder(ParentPath, patient_folders{i}, 'follow up', desired_sampling_rate, ...
-        desired_channel_order, removable_channels, channel_tobe_replaced, ...
-        new_channel_names, header_format, chann_info_name);
-end 
+switch lower(selection_mode)
+    case 'parentpath'
+    ParentPath = uigetdir('', 'Select Parent Directory');
+    if ParentPath == 0
+        fprintf('Operation canceled by the user.\n')
+        return;
+    end
 
-fprintf('All files processed successfully.\n');
-   
+    patient_folders = Find_folders(ParentPath);
+    % Process each patient folder
+    for i = 1:length(patient_folders)
+        fprintf('Processing patient folder: %s\n', patient_folders{i});
+        
+        % Process diagnosis folder
+        ProcessFolder(ParentPath, patient_folders{i}, 'diagnosis', desired_sampling_rate, ...
+            desired_channel_order, removable_channels, channel_tobe_replaced, ...
+            new_channel_names, header_format, chann_info_name);
+        
+        % Process follow-up folder
+        ProcessFolder(ParentPath, patient_folders{i}, 'follow up', desired_sampling_rate, ...
+            desired_channel_order, removable_channels, channel_tobe_replaced, ...
+            new_channel_names, header_format, chann_info_name);
+    end 
+    
+    fprintf('All files processed successfully.\n');
+       
+
+case 'edf'
+    [fileNames, filePath] = uigetfile('*.edf', 'Select EDF file(s)', 'MultiSelect', 'on');
+    
+    if fileNames == 0
+        fprintf('Operation canceled by the user.\n')
+        return;
+    end
+
+    % Convert to cell array if single file selected
+    if ~iscell(fileNames)
+        fileNames = {fileNames};
+    end
+    for i = 1:length(fileNames)
+        fprintf('Processing file %d%d: %s',i,length(fileNames),fileNames{i})
+
+        % ProcessFolder(filePath,)
+
+        Convert_EDF2Mat (filePath,fileNames{i},desired_sampling_rate,desired_channel_order, ...
+            removable_channels,channel_tobe_replaced, new_channel_names,header_format,filePath,chann_info_name)
+
+    end
+
+
+
 end
 
 
 
+end
 
-
-function Convert_EDF2Mat (file_path,file_name,desired_sampling_rate,desired_channel_order,removable_channels,channel_tobe_replaced, new_channel_names,header_format,ParentPath,chann_info_name,edf_name)
+function Convert_EDF2Mat (file_path,file_name,desired_sampling_rate,desired_channel_order,removable_channels,channel_tobe_replaced, ...
+    new_channel_names,header_format,PathToSaveChannelInfo,chann_info_name)
 % CONVERT_EDF2MAT Converts an EDF file to MAT format with specified parameters
 %
 % This function reads an EDF file, processes it according to the specified parameters,
@@ -66,16 +104,17 @@ function Convert_EDF2Mat (file_path,file_name,desired_sampling_rate,desired_chan
 %
 % Inputs:
 %   folder_path - Path to the folder containing the EDF file
-%   edf_name - Name of the EDF file
+%   file_name - Name of the EDF file
 %   desired_sampling_rate - Target sampling rate
 %   desired_channel_order - Cell array of channel names in desired order
 %   removable_channels - Cell array of channels to be excluded
 %   channel_tobe_replaced - Cell array of channel names to be replaced
 %   new_channel_names - Cell array of new names for channels to be replaced
 %   header_format - 'EEGlab' for EEGlab format, empty for default format
-%   ParentPath - Parent directory path
+%   PathToSaveChannelInfo - Directory to save the .mat file that saves the
+%   info of changes to the EEG channel names
 %   chann_info_name - Name for the channel information output file
-%   edf_name - Name of the EDF file (for logging)
+
 
 
 addpath(file_path)
@@ -93,7 +132,7 @@ clear record
 
 
 [reordered_record,sorted_channels_Indices] =Standardize_EEG_Channel_Order (desired_channel_order,removable_channels,channel_tobe_replaced, ...
-    new_channel_names,EEG_record, EEG_original_channel_order,ParentPath,chann_info_name,edf_name);
+    new_channel_names,EEG_record, EEG_original_channel_order,PathToSaveChannelInfo,chann_info_name,file_name);
 
 
 
@@ -222,7 +261,7 @@ for j = 1:length(edf_files)
     
         Convert_EDF2Mat(folder_path, edf_name, desired_sampling_rate, ...
             desired_channel_order, removable_channels, channel_tobe_replaced, ...
-            new_channel_names, header_format, ParentPath, chann_info_name, edf_name);
+            new_channel_names, header_format, ParentPath, chann_info_name);
    
     
 end
