@@ -92,7 +92,7 @@ clear record
 %% removing the channels that have similarity in names with our main 19 channels
 
 
-[reordered_record,sorted_channels_Indices] =Get_desired_channel_order_excelOutput_replacing_input (desired_channel_order,removable_channels,channel_tobe_replaced, ...
+[reordered_record,sorted_channels_Indices] =Standardize_EEG_Channel_Order (desired_channel_order,removable_channels,channel_tobe_replaced, ...
     new_channel_names,EEG_record, EEG_original_channel_order,ParentPath,chann_info_name,edf_name);
 
 
@@ -157,7 +157,7 @@ end
 
 function [folderNames] = Find_folders(ParentPath)
 j = 1;
-folderNames = {}
+folderNames = {};
 All_files_and_folders = dir(ParentPath);
 for i = 1: length(All_files_and_folders)
 
@@ -219,13 +219,12 @@ for j = 1:length(edf_files)
         continue;
            % Convert the file
     end
-    try
+    
         Convert_EDF2Mat(folder_path, edf_name, desired_sampling_rate, ...
             desired_channel_order, removable_channels, channel_tobe_replaced, ...
             new_channel_names, header_format, ParentPath, chann_info_name, edf_name);
-    catch ME
-        fprintf('Error processing %s: %s\n', edf_name, ME.message);
-    end
+   
+    
 end
 end
 
@@ -240,7 +239,7 @@ function fname = Get_Output_Filename(file_name, original_Fs, desired_sampling_ra
     end
 end
 
-function resmapledEEG = Resample_Data(EEG_signal,desired_sampling_rate,original_Fs,num_channels)
+function resampledEEG = Resample_Data(EEG_signal,desired_sampling_rate,original_Fs,num_channels)
     % RESAMPLEDATA Resamples the EEG data to the desired sampling rate
     %
     % Inputs:
