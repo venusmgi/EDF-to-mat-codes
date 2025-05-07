@@ -15,68 +15,25 @@ if nargin < 7
 end
 
 ParentPath = uigetdir;
-
 patient_folders = Find_folders(ParentPath);
-% Construct the full path to the diagnosis and follow up folder in each patient folder
+
+% Process each patient folder
 for i = 1:length(patient_folders)
+    fprintf('Processing patient folder: %s\n', patient_folders{i});
+    
+    % Process diagnosis folder
+    ProcessFolder(ParentPath, patient_folders{i}, 'diagnosis', desired_sampling_rate, ...
+        desired_channel_order, removable_channels, channel_tobe_replaced, ...
+        new_channel_names, header_format, chann_info_name);
+    
+    % Process follow-up folder
+    ProcessFolder(ParentPath, patient_folders{i}, 'follow up', desired_sampling_rate, ...
+        desired_channel_order, removable_channels, channel_tobe_replaced, ...
+        new_channel_names, header_format, chann_info_name);
+end 
 
-    All_DX_edfs = fullfile(ParentPath, patient_folders(i),'\diagnosis\');
-    cd (All_DX_edfs{1})
-    DX_edfs = dir ('*.edf');
-    current_path = pwd;
-
-
-
-    for j = 1:length(DX_edfs)
-
-        DX_name = DX_edfs(j).name;
-        DX_filePath = fullfile(current_path,DX_name);
-        matFileName1 = strrep(DX_name, '.edf', '_reordered.mat');
-        matFileName2 = strrep(DX_name, '.edf', '_reordered_resampled.mat');
-        matFilePath1 = fullfile(current_path, matFileName1);
-        matFilePath2 = fullfile(current_path, matFileName2);
-
-
-        %%checks to see if there is any mat files present in the folder
-        if (exist(matFilePath1)==2)|(exist(matFilePath2)==2)
-            display(strcat(matFileName1,' already exists'));
-        else
-            Convert_EDF2Mat (All_DX_edfs{1},DX_name,desired_sampling_rate,...
-                desired_channel_order,removable_channels,channel_tobe_replaced, new_channel_names,...
-                header_format,ParentPath,chann_info_name,DX_name);
-
-        end
-    end
-
-    All_FU_edfs = fullfile(ParentPath, patient_folders(i),'\follow up\');
-    cd (All_FU_edfs{1})
-    FU_edfs = dir ('*.edf');
-    current_path = pwd;
-
-
-
-    for j = 1:length(FU_edfs)
-
-        FU_name = FU_edfs(j).name;
-        FU_filePath = fullfile(current_path,FU_name);
-        matFileName1 = strrep(FU_name, '.edf', '_reordered.mat');
-        matFileName2 = strrep(FU_name, '.edf', '_reordered_resampled.mat');
-        matFilePath1 = fullfile(current_path, matFileName1);
-        matFilePath2 = fullfile(current_path, matFileName2);
-
-
-        %%checks to see if there is any mat files present in the folder
-        if (exist(matFilePath1)==2) |(exist(matFilePath2)==2)
-            display(strcat(matFileName1,' already exists'));
-        else
-            Convert_EDF2Mat (All_FU_edfs{1},FU_name,desired_sampling_rate,...
-                desired_channel_order,removable_channels,channel_tobe_replaced,new_channel_names,...
-                header_format,ParentPath,chann_info_name,FU_name);
-        end
-    end
-
-
-end
+fprintf('All files processed successfully.\n');
+   
 end
 
 %taking all the files that end with .edf
@@ -190,6 +147,60 @@ for i = 1: length(All_files_and_folders)
         j = j+1;
 
 
+    end
+end
+end
+
+
+function ProcessFolder(ParentPath, patient_folder, folder_type, desired_sampling_rate, ...
+    desired_channel_order, removable_channels, channel_tobe_replaced, ...
+    new_channel_names, header_format, chann_info_name)
+% PROCESSFOLDER Processes EDF files in a specific folder
+%
+% This helper function processes all EDF files in a specified folder (diagnosis or follow-up)
+% and converts them to MAT format with the specified parameters.
+
+% Construct folder path
+folder_path = fullfile(ParentPath, patient_folder, folder_type);
+if ~exist(folder_path, 'dir')
+    fprintf('Warning: %s folder not found for patient %s\n', folder_type, patient_folder);
+    return;
+end
+
+% Change to folder and get EDF files
+cd(folder_path);
+edf_files = dir('*.edf');
+if isempty(edf_files)
+    fprintf('No EDF files found in %s folder for patient %s\n', folder_type, patient_folder);
+    return;
+end
+
+% Process each EDF file
+for j = 1:length(edf_files)
+    edf_name = edf_files(j).name;
+    fprintf('Processing file: %s\n', edf_name);
+     % current_path = pwd;
+
+    % Check if output files already exist
+    matFileName1 = strrep(edf_name, '.edf', '_reordered.mat');
+    matFileName2 = strrep(edf_name, '.edf', '_reordered_resampled.mat');
+    matFilePath1 = fullfile(folder_path, matFileName1);
+    matFilePath2 = fullfile(folder_path, matFileName2);
+
+     % matFilePath1 = fullfile(current_path, matFileName1);
+     % matFilePath2 = fullfile(current_path, matFileName2);
+    
+    if exist(matFilePath1, 'file') || exist(matFilePath2, 'file')
+        fprintf('Skipping %s - output files already exist\n', edf_name);
+        continue;
+           % Convert the file
+    end
+    try
+        Convert_EDF2Mat(folder_path, edf_name, desired_sampling_rate, ...
+            desired_channel_order, removable_channels, channel_tobe_replaced, ...
+            new_channel_names, header_format, ParentPath, chann_info_name, edf_name);
+    catch ME
+        fprintf('Error processing %s: %s\n', edf_name, ME.message);
     end
 end
 end
