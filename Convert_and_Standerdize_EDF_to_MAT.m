@@ -1,44 +1,39 @@
-% header_format
-% if you want the output .mat file to have the EEG_lab structure, yo should
-% define it as 'EEG_lab', if not, it will have the default format defined
-% in "edfreadUntilDone.m"
-
-function Convert_EDFtomat_Desired_Fs_channOrder_Parent_Path_ExcOut_repCh (desired_sampling_rate,desired_channel_order,removable_channels, channel_tobe_replaced, ...
-    new_channel_names,chann_info_name,selection_mode, header_format)
+function Convert_and_Standerdize_EDF_to_MAT (desiredSamplingRate,desiredChannelOrder,removableChannels, channelsToBeReplaced, ...
+    newChannelNames,channInfoName,selectionMode, headerFormat)
 % CONVERT_EDF2MAT Converts a single EDF file to MAT format with specified parameters
 %
 % This function converts an EDF file to MAT format, reordering channels and
 % resampling the data according to specified parameters.
 %
 % Inputs:
-%   file_path - Path to the EDF file
-%   file_name - Name of the EDF file
-%   desired_sampling_rate - Target sampling rate for the output
-%   desired_channel_order - Cell array of channel names in desired order
-%   removable_channels - Cell array of channels to be excluded
-%   channel_tobe_replaced - Cell array of channel names to be replaced
-%   new_channel_names - Cell array of new names for channels to be replaced
-%   header_format - 'EEGlab' for EEGlab format, empty for default format
-%   ParentPath - Parent directory path
-%   chann_info_name - Name for the channel information output file
-%   edf_name - Name of the EDF file being processed
+
+%   desiredSamplingRate - Target sampling rate for the output (e.g 200 Hz)
+%   desiredChannelOrder - Cell array of channel names in desired order
+%   removableChannels - Cell array of channels to be excluded
+%   channelsToBeReplaced - Cell array of channel names to be replaced
+%   newChannelNames - Cell array of new names for channels to be replaced
+%   channInfoName - Name for the channel information output file
+%   selectionMode - To convert in edfs in folders or directly selecting EDF
+%   headerFormat - 'EEGlab' for EEGlab format, empty for default format
 %
 % Outputs:
-%   Saves a .mat file with either EEGlab format or standard format
+%   Saves a .mat file of re-ordered EEG with either EEGlab format or standard format
+%   save a second mat file that records the changes that has been done to
+%   channel names
 
 functionPath = pwd;
 addpath(functionPath)
 
 if nargin < 8
-    header_format = '';  % Default value (regular header format)
+    headerFormat = '';  % Default value (regular header format)
 end
 
 if nargin <7 
-    selection_mode = questdlg('Select a processing Mode:', 'Processing Mode', ...
+    selectionMode = questdlg('Select a processing Mode:', 'Processing Mode', ...
         'ParentPath', 'EDF','ParentPath');
 end
 
-switch lower(selection_mode)
+switch lower(selectionMode)
     case 'parentpath'
     ParentPath = uigetdir('', 'Select Parent Directory');
     if ParentPath == 0
@@ -46,20 +41,20 @@ switch lower(selection_mode)
         return;
     end
 
-    patient_folders = Find_folders(ParentPath);
+    patientFolders = Find_Folders(ParentPath);
     % Process each patient folder
-    for i = 1:length(patient_folders)
-        fprintf('Processing patient folder: %s\n', patient_folders{i});
+    for i = 1:length(patientFolders)
+        fprintf('Processing patient folder: %s\n', patientFolders{i});
         
         % Process diagnosis folder
-        ProcessFolder(ParentPath, patient_folders{i}, 'diagnosis', desired_sampling_rate, ...
-            desired_channel_order, removable_channels, channel_tobe_replaced, ...
-            new_channel_names, header_format, chann_info_name);
+        Process_Folder(ParentPath, patientFolders{i}, 'diagnosis', desiredSamplingRate, ...
+            desiredChannelOrder, removableChannels, channelsToBeReplaced, ...
+            newChannelNames, headerFormat, channInfoName);
         
         % Process follow-up folder
-        ProcessFolder(ParentPath, patient_folders{i}, 'follow up', desired_sampling_rate, ...
-            desired_channel_order, removable_channels, channel_tobe_replaced, ...
-            new_channel_names, header_format, chann_info_name);
+        Process_Folder(ParentPath, patientFolders{i}, 'follow up', desiredSamplingRate, ...
+            desiredChannelOrder, removableChannels, channelsToBeReplaced, ...
+            newChannelNames, headerFormat, channInfoName);
     end 
     
     fprintf('All files processed successfully.\n');
@@ -81,9 +76,8 @@ case 'edf'
         fprintf('Processing file %d%d: %s',i,length(fileNames),fileNames{i})
 
         % ProcessFolder(filePath,)
-
-        Convert_EDF2Mat (filePath,fileNames{i},desired_sampling_rate,desired_channel_order, ...
-            removable_channels,channel_tobe_replaced, new_channel_names,header_format,filePath,chann_info_name)
+        Convert_EDF2Mat (filePath,fileNames{i},desiredSamplingRate,desiredChannelOrder, ...
+            removableChannels,channelsToBeReplaced, newChannelNames,headerFormat,filePath,channInfoName)
 
     end
 
@@ -95,80 +89,82 @@ end
 
 end
 
-function Convert_EDF2Mat (file_path,file_name,desired_sampling_rate,desired_channel_order,removable_channels,channel_tobe_replaced, ...
-    new_channel_names,header_format,PathToSaveChannelInfo,chann_info_name)
+function Convert_EDF2Mat (filePath,fileName,desiredSamplingRate,desiredChannelOrder,removableChannels,channelsToBeReplaced, ...
+    newChannelNames,headerFormat,PathToSaveChannelInfo,channInfoName)
 % CONVERT_EDF2MAT Converts an EDF file to MAT format with specified parameters
 %
 % This function reads an EDF file, processes it according to the specified parameters,
 % and saves the results in MAT format.
 %
 % Inputs:
-%   folder_path - Path to the folder containing the EDF file
-%   file_name - Name of the EDF file
-%   desired_sampling_rate - Target sampling rate
-%   desired_channel_order - Cell array of channel names in desired order
-%   removable_channels - Cell array of channels to be excluded
-%   channel_tobe_replaced - Cell array of channel names to be replaced
-%   new_channel_names - Cell array of new names for channels to be replaced
-%   header_format - 'EEGlab' for EEGlab format, empty for default format
+%   filePath - Path to the folder containing the EDF file
+%   fileName - Name of the EDF file
+%   desiredSamplingRate - Target sampling rate
+%   desiredChannelOrder - Cell array of channel names in desired order
+%   removableChannels - Cell array of channels to be excluded
+%   channelsToBeReplaced - Cell array of channel names to be replaced
+%   newChannelNames - Cell array of new names for channels to be replaced
+%   headerFormat - 'EEGlab' for EEGlab format, empty for default format
 %   PathToSaveChannelInfo - Directory to save the .mat file that saves the
 %   info of changes to the EEG channel names
-%   chann_info_name - Name for the channel information output file
+%   channInfoName - Name for the channel information output file
 
 
 
-addpath(file_path)
-isEEGlabFormat = strcmpi(header_format, 'EEGlab');
-num_channels = length(desired_channel_order);
-[hdr, record] = edfreadUntilDone(string(file_name));
-EEG_original_channel_order = hdr.label;
-%     True_Fs = hdr.samples(1)/ hdr.duration;
-original_Fs = int64(hdr.frequency(1));  %TODO: figure out a better way to find the original fs
+addpath(filePath)
+isEEGlabFormat = strcmpi(headerFormat, 'EEGlab');
+numChannels = length(desiredChannelOrder);
 
-EEG_record = record;
-clear record
+%convert edf to .mat
+[hdr, eegRecord] = edfreadUntilDone(string(fileName));
 
-%% removing the channels that have similarity in names with our main 19 channels
-
-
-[reordered_record,sorted_channels_Indices] =Standardize_EEG_Channel_Order (desired_channel_order,removable_channels,channel_tobe_replaced, ...
-    new_channel_names,EEG_record, EEG_original_channel_order,PathToSaveChannelInfo,chann_info_name,file_name);
+%saving header info
+EEGOriginalChannelOrder = hdr.label;
+% finding the original sampling rate as it is in the header
+originalFs = int64(hdr.frequency(1));  %TODO: figure out a better way to find the original fs
 
 
-
-% Determine output filename based on resampling
-fname = Get_Output_Filename(file_name, original_Fs, desired_sampling_rate);
-reordered_EEG.setname = fname;
+% change the channel names and order based on the input
+[reordered_record,sortedChannelsIndices] =Standardize_EEG_Channel_Order (desiredChannelOrder,removableChannels,channelsToBeReplaced, ...
+    newChannelNames,eegRecord, EEGOriginalChannelOrder,PathToSaveChannelInfo,channInfoName,fileName);
 
 
 % Resample if needed
-if original_Fs ~= desired_sampling_rate
-    reordered_record = Resample_Data(reordered_record,  desired_sampling_rate, original_Fs, num_channels);
-    hdr.frequency(1:num_channels) = desired_sampling_rate;
+if originalFs ~= desiredSamplingRate
+    reordered_record = Resample_Data(reordered_record,  desiredSamplingRate, originalFs, numChannels);
+    hdr.frequency(1:numChannels) = desiredSamplingRate;
 end
 
-%in case we wanted it to be in EEGLab format
-% Saving the EEG record of the channel order we want
-reordered_EEG = make_EEG_header(hdr,desired_channel_order);
-reordered_EEG.data = reordered_record;
-
+% Determine output filename based on resampling
+fname = Get_Output_Filename(fileName, originalFs, desiredSamplingRate);
 
 
 % Save the processed data
 fprintf('Saving processed data...\n');
-Save_Processed_Data(fname, isEEGlabFormat, reordered_EEG, hdr, ...
-    sorted_channels_Indices, desired_channel_order, reordered_record);
+
+if isEEGlabFormat
+%in case we wanted it to be in EEGLab format
+% Saving the EEG record of the channel order we want
+    reordered_EEG = Make_EEG_Header(hdr,desiredChannelOrder);
+    reordered_EEG.setname = fname;
+    reordered_EEG.data = reordered_record;
+    save(fname, 'reordered_EEG', '-v7.3');
+else
+    reordered_hdr = New_Header(hdr, sortedChannelsIndices, desiredChannelOrder);
+    save(fname,"reordered_record","reordered_hdr", '-v7.3');
+end
+
 
 fprintf('Successfully saved: %s\n', fname);
 
 
-clear EEG_original_channel_order EEG_record reordered_record hdr reordered_hdr reordered_EEG fname file_name file_name
-
 end
-%%subfunctions
-% EEG.chanlocs.labels
 
-function [reordered_hdr]= new_header(header,sortedIndices,desired_channel_order)
+
+%% subfunctions
+
+
+function [reordered_hdr]= New_Header(header,sortedIndices,desired_channel_order)
 reordered_hdr = header;
 reordered_hdr.label = desired_channel_order;
 reordered_hdr.transducer = header.transducer (sortedIndices);
@@ -184,29 +180,28 @@ reordered_hdr.ns = length(sortedIndices) ;
 % reordered_hdr. = header. (sortedIndices);
 end
 
-function [EEG]= make_EEG_header(header,desired_channel_order)
+function [EEG]= Make_EEG_Header(header,desiredChannelOrder)
 load EEG_struct.mat;
-EEG.chanlocs.labels = char(desired_channel_order);
+EEG.chanlocs.labels = char(desiredChannelOrder);
 EEG.srate = unique(header.frequency);
-EEG.nbchan = length(desired_channel_order);
+EEG.nbchan = length(desiredChannelOrder);
 
 end
 
 
-
-function [folderNames] = Find_folders(ParentPath)
+function [folderNames] = Find_Folders(ParentPath)
 j = 1;
 folderNames = {};
-All_files_and_folders = dir(ParentPath);
-for i = 1: length(All_files_and_folders)
+allFilesAndFolders = dir(ParentPath);
+for i = 1: length(allFilesAndFolders)
 
     % skipping non-folders and folders starting with '.' (hidden folders on Unix-like systems)
-    foldername = All_files_and_folders(i).name;
+    foldername = allFilesAndFolders(i).name;
 
-    if All_files_and_folders(i).isdir &  ~((strcmpi(foldername, '..')) || (strcmpi(foldername, '.')))
+    if allFilesAndFolders(i).isdir &  ~((strcmpi(foldername, '..')) || (strcmpi(foldername, '.')))
 
         % Get the folder name
-        folderNames{j} = All_files_and_folders(i).name;
+        folderNames{j} = allFilesAndFolders(i).name;
         j = j+1;
 
 
@@ -215,18 +210,18 @@ end
 end
 
 
-function ProcessFolder(ParentPath, patient_folder, folder_type, desired_sampling_rate, ...
-    desired_channel_order, removable_channels, channel_tobe_replaced, ...
-    new_channel_names, header_format, chann_info_name)
+function Process_Folder(ParentPath, patientFolder, folderType, desiredSamplingRate, ...
+    desiredChannelOrder, removableChannels, channelsToBeReplaced, ...
+    newChannelNames, headerFormat, channInfoName)
 % PROCESSFOLDER Processes EDF files in a specific folder
 %
 % This helper function processes all EDF files in a specified folder (diagnosis or follow-up)
 % and converts them to MAT format with the specified parameters.
 
 % Construct folder path
-folder_path = fullfile(ParentPath, patient_folder, folder_type);
+folder_path = fullfile(ParentPath, patientFolder, folderType);
 if ~exist(folder_path, 'dir')
-    fprintf('Warning: %s folder not found for patient %s\n', folder_type, patient_folder);
+    fprintf('Warning: %s folder not found for patient %s\n', folderType, patientFolder);
     return;
 end
 
@@ -234,7 +229,7 @@ end
 cd(folder_path);
 edf_files = dir('*.edf');
 if isempty(edf_files)
-    fprintf('No EDF files found in %s folder for patient %s\n', folder_type, patient_folder);
+    fprintf('No EDF files found in %s folder for patient %s\n', folderType, patientFolder);
     return;
 end
 
@@ -259,9 +254,9 @@ for j = 1:length(edf_files)
            % Convert the file
     end
     
-        Convert_EDF2Mat(folder_path, edf_name, desired_sampling_rate, ...
-            desired_channel_order, removable_channels, channel_tobe_replaced, ...
-            new_channel_names, header_format, ParentPath, chann_info_name);
+        Convert_EDF2Mat(folder_path, edf_name, desiredSamplingRate, ...
+            desiredChannelOrder, removableChannels, channelsToBeReplaced, ...
+            newChannelNames, headerFormat, ParentPath, channInfoName);
    
     
 end
@@ -306,17 +301,3 @@ function resampledEEG = Resample_Data(EEG_signal,desired_sampling_rate,original_
     end
 end
 
-function Save_Processed_Data(fname,isEEGlabFormat,reordered_EEG,hdr,...
-                              sorted_channels_Indices,desired_channel_order,reordered_record)
-    % Saving the EEG record of the channel order we want
-    if isEEGlabFormat
-        reordered_EEG = make_EEG_header_EEGlab(hdr, desired_channel_order);
-    
-        save(fname, 'reordered_EEG', '-v7.3');
-    else
-        reordered_hdr = new_header(hdr, sorted_channels_Indices, desired_channel_order);
-        save(fname,"reordered_record","reordered_hdr", '-v7.3');
-    end
-
-
-end
