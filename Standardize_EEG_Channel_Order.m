@@ -4,8 +4,9 @@
 % if you want the output .mat file to have the EEG_lab structure, yo should
 % define it as 'EEG_lab', if not, it will have the default format defined
 % in "edfreadUntilDone.m"
-function [reorderd_record,desiredEEGChannelsIdx] = Standardize_EEG_Channel_Order (desiredChannelOrder,removableChannels,channelsToBeReplaced, newChannelNames, ...
-    signalEEG,originalChannelOrder,parentPath,channelInfoFileName,edfFileName)
+function [reorderd_record,desiredEEGChannelsIdx] = Standardize_EEG_Channel_Order (desiredChannelOrder,...
+    removableChannels,channelsToBeReplaced, newChannelNames, ...
+    signalEEG,originalChannelOrder,pathToSaveReport,channelInfoFileName,edfFileName)
 
 % Previoulsy was called Get_desiredChannelOrder_excelOutput_replacing_input
 % STANDARDIZE_EEG_CHANNEL_ORDER Reorders and standardizes EEG channel names and data
@@ -13,7 +14,7 @@ function [reorderd_record,desiredEEGChannelsIdx] = Standardize_EEG_Channel_Order
 % This function performs three main operations:
 % 1. Replaces specified channels with new names
 % 2. Reorders channels according to a desired order
-% 3. Saves channel information and changes to an Excel file
+% 3. Saves channel information and changes to an .mat file
 %
 % Inputs:
 %   desiredChannelOrder - Cell array of channel names in the desired order
@@ -22,8 +23,8 @@ function [reorderd_record,desiredEEGChannelsIdx] = Standardize_EEG_Channel_Order
 %   newChannelNames - Cell array of new names for channels to be replaced
 %   signalEEG - Numeric matrix of EEG data (channels x time points)
 %   originalChannelOrder - Cell array of original channel names
-%   parentPath - String path where output files will be saved
-%   channelInfoFileName - String name for the output Excel file
+%   pathToSaveReport - String path where output files will be saved
+%   channelInfoFileName - String name for the output .mat file
 %   (suggestion, use different names each time you run this function, and
 %   then concatante the results later)
 %   edfFileName - String name of the input EDF file
@@ -34,12 +35,11 @@ function [reorderd_record,desiredEEGChannelsIdx] = Standardize_EEG_Channel_Order
 %
 % Example:
 %   [reordered_data, channel_indices] = Standardize_EEG_Channel_Order(...
-%       {'Fp1','Fp2','F3','F4'}, {'X1','X2'}, {'X1','X2'}, {'EKG1','EKG2'}, ...
+%       {'Fp1','Fp2','F3','F4'}, {'CO2','SpO2'}, {'EEGX3' ,'EEGX4'}, {'EKG1','EKG2'}, ...
 %       eeg_data, original_channels, 'C:\Data', 'channel_info', 'subject1.edf');
 
 % Note: The order and length of channels in channelsToBeReplaced and
 % newChannelNames should be the same
-
 
 
 % Input validation
@@ -58,10 +58,9 @@ end
 if ~iscell(originalChannelOrder) || isempty(originalChannelOrder)
     error('originalChannelOrder must be a non-empty cell array');
 end
-if ~ischar(parentPath) || ~ischar(channelInfoFileName) || ~ischar(edfFileName)
-    error('parentPath, channelInfoFileName, and edfFileName must be character arrays');
+if ~ischar(pathToSaveReport) || ~ischar(channelInfoFileName) || ~ischar(edfFileName)
+    error('pathToSaveReport, channelInfoFileName, and edfFileName must be character arrays');
 end
-
 
 
 
@@ -73,65 +72,19 @@ assert(length(channelsToBeReplaced)==length(newChannelNames),...
 % Create a copy of original channel labels for reference
 originalChannelLabels = originalChannelOrder;
 
-% Step 1: Mark removable channels as 'unusable'
-% This step identifies channels that should be excluded from the final output
-for i = 1:length(removableChannels)
-    if any(contains(originalChannelOrder,removableChannels{i}))
-        removableChannelIdx = contains(originalChannelOrder,removableChannels{i});
-        originalChannelOrder{removableChannelIdx} = 'unusable';
-    end
-end
+%% Step1 Removing undesired channele, meaning that we will replace them with "unusable"
+originalChannelLabels = Remove_Channel_Names (originalChannelLabels,removableChannels);
 
 
-%% standardizing the Channel names
 
-% Step 2: Standardize channel names
+%% Step2 : Renaming the unconvential channel names with the mapped channels or inputted channle names or both
+
 % Replace incorrectly named channels with their correct names
-if ~isempty(channelsToBeReplaced) && ~isempty(newChannelNames)
-    for i = 1:length(channelsToBeReplaced)
-        chan_name{1} = channelsToBeReplaced{i};
-        new_chan_name = newChannelNames{i};
-        originalChannelLabels = Replace_Channel_Names(originalChannelLabels, chan_name, new_chan_name);
-    end
-end
+originalChannelLabels = Rename_Channel_Labels(originalChannelLabels,channelsToBeReplaced,newChannelNames);
 
 
-% Define mappings for possible channel names and their desired replacements
-% This mapping helps standardize channel names across different recording systems
-channelMappings = {'Eye1',{'LUO','EEGPOLLUO','POLEOGL','POLLLC','POLLOC','EEGLOCRef', 'LOC','EOGL','LLC', 'LUE','LUOC','Reye','POLLLE',...
-    'LEYE','LIO','EEGLEYERef','LOF','LEOG','POLLLE','POLLUE','LLE','EOGLT'};
-    'Eye2',{'RLO','EEGPOLRLO','POLEOGR','POLROC','EEGROCRef','EOGR','ROC','RAE','RUE','RLOC','Leye','POLRUE','REYE','RIO',...
-    'EEGREYERef','ROF','REOG','POLRUE','POLRLE','EOGRT'};
-    'EKG1',{'ECGL','ECG1','ecg1','EKGL','LEKG','EEGLEKGRef','ECGLA','EEGECGLRef','EKGLT'};
-    'EKG2',{'ECGR','ECG2','ecg2','EKGR','REKG','EEGREKGRef','ECGRA','EEGECGRRef','EKGRT'};
-    'EKG',{'ECG','EEGEKGRef','POLEKG','EEGPOLEKG'};
-    'EMG',{'CHIN1','CHIN2','NECK1','NECK2','NEC1','NEC2','Lleg1','Lleg2','Rleg1','Rleg2','chin','EEGNeckRef','POLNeck1',...
-    'POLNeck2','neck1','neck2','LEMG1','REMG1','EEGCHIN1Ref','EEGCHIN2Ref','POLNECK1','POLNECK2','POLChin1','POLChin2','RLEG',...
-    'LLEG','EMGR','EMGL','ABD1','ABD2','EEGABD1Ref','EEGABD2Ref','CHINLT','CHINRT','ABDBLK','ABDWHT','UCHIN','LCHIN'};
-    'T3',{'T7','EEGT7Ref'};
-    'T4',{'T8','EEGT8Ref'};
-    'T5',{'P7','EEGP7Ref'} ;
-    'T6', {'P8','EEGP8Ref'}
-    };
-
-% Apply the channel mappings to standardize channel names
-for k = 1:length(channelMappings)
-    desiredName = channelMappings{k, 1};
-    possibleNames = channelMappings{k, 2};
-    originalChannelLabels= Replace_Channel_Names (originalChannelLabels, possibleNames,  desiredName );
-end
-
-
-% Renaming and Counting Channels (EKGs with EKG1 and EKG2, and EMGs with EMG1 and EMG2)
-
-channelCounters = struct('EMG', 0, 'EKG', 0, 'Fz', 0, 'O1', 0, 'O2', 0);
-% Initialize a struct to hold channel name counters
-
-
-% Iterate through the channel names to standardize and count them
-for i = 1:length(originalChannelLabels)
-    [originalChannelLabels{i},channelCounters] = Count_Channels(originalChannelLabels{i}, channelCounters);
-end
+%Counting duplicate channels (e.g. EKG channles will be replaced by  with EKG1, EKG2)
+originalChannelLabels = Resolve_Channel_Duplicate(originalChannelLabels);
 
 
 
@@ -140,21 +93,24 @@ end
 % Find indices of desired channels and save updated channel labels
 
 [includedChannelLabels,includedChannelIndices]=Find_Desired_Channels_Order_And_Indices(originalChannelLabels,desiredChannelOrder,removableChannels);
-Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,parentPath,channelInfoFileName)
+
+%saving the changes that has been made to channel labels, from renaming to
+%re-ordering
+Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,pathToSaveReport,channelInfoFileName)
 
 
 
 %% Reorder EEG Record
 % Reorder the EEG data according to the desired channel order
 
-
-
  recordDesiredChanns = signalEEG(includedChannelIndices,:);
 
 
+ %if there is any channels that have not been included, find them an
+ %include them
 [~, desiredEEGChannelsIdx] = ismember (desiredChannelOrder,includedChannelLabels);
 if any(desiredEEGChannelsIdx ==0)
-    desiredEEGChannelsIdx =  Find_Sorted_indices(includedChannelLabels,desiredChannelOrder);
+    desiredEEGChannelsIdx =  Find_Missed_Channels(includedChannelLabels,desiredChannelOrder);
 end
 
 
@@ -169,23 +125,47 @@ end
 
 function [includedChannelOrder,includedChannelIndices] = Find_Desired_Channels_Order_And_Indices(channelLabels,desiredOrder,removableChannels)
 
-% FIND_DESIRED_CHANNELS_ORDER_AND_INDICES Finds indices of desired channels
+% FIND_DESIRED_CHANNELS_ORDER_AND_INDICES Identifies indices of desired EEG channels.
 %
-% This function identifies channels that match the desired order and are not removable.
-% It returns the order and indices of these channels.
+% This function evaluates a list of EEG channel labels to identify those that fit a specified
+% desired order and are not listed as removable. It returns the order and indices of these channels.
+%
+% Inputs:
+%   channelLabels - A cell array containing original channel labels (e.g., {'Fp1', 'Fp2', 'O1', ...}).
+%   desiredOrder - A cell array specifying the desired order of channels to retain.
+%   removableChannels - A cell array of channel names that should be
+%   excluded from consideration. (optional)
+%
+% Outputs:
+%   includedChannelOrder - A cell array of channel labels that match the desired order and are retained.
+%   includedChannelIndices - A vector of indices indicating the positions of the included channels within the original list.
+
+% Initialize logical vector for included channels.
 
 
 
+% Initialize logical vector for included channels
+includedChannelIndices = false(1, length(channelLabels));
 
-for i = 1:length(channelLabels)
-    contains_required_channels = contains(lower(channelLabels{i}) , lower(desiredOrder) );
-    does_not_contain_removableChannels = ~( contains (channelLabels{i} ,removableChannels));
-    includedChannelIndices(:,i) =  contains_required_channels && does_not_contain_removableChannels;
+% checks if the removableChannels has been inputted
+if nargin < 3
+% Evaluate each channel label against desired order and removable list
+    for i = 1:length(channelLabels)
+        containsRequiredChannels = contains(lower(channelLabels{i}) , lower(desiredOrder) );
+        doesNotContainRemovableChannels = ~( contains (channelLabels{i} ,removableChannels));
+        % Mark channel as included if it is required and not removable
+        includedChannelIndices(:,i) =  containsRequiredChannels && doesNotContainRemovableChannels;
+    end
+else
+    % Evaluate each channel label against desired order and mark it as
+    % included if it matches
+    for i = 1:length(channelLabels)
+        includedChannelIndices(:,i) = contains(lower(channelLabels{i}) , lower(desiredOrder) );
+    end
 end
 
 
-
-
+% Check if the number of included channels matches the desired order length
 if sum(includedChannelIndices) ~= length(desiredOrder)
     % Find missing and extra channels
     missingChannels = setdiff(desiredOrder, channelLabels(includedChannelIndices));
@@ -204,9 +184,8 @@ if sum(includedChannelIndices) ~= length(desiredOrder)
     errorMsg = [errorMsg sprintf('2. If a channel is marked as 0 but needed, add it to desiredChannelOrder\n')];
     error(errorMsg);
 end
-% contains(lower(channelLabels(1,i)) , lower(desiredOrder) );
-includedChannelIndices=find(includedChannelIndices);
 
+includedChannelIndices = find(includedChannelIndices); %TODO: isn't it better if i output just the 0 and 1s?
 includedChannelOrder = channelLabels(includedChannelIndices);
 
 end
@@ -214,103 +193,43 @@ end
 
 
 
-function [sortedIndices] = Find_Sorted_indices (EEG_remaining_channel_labels,desiredOrder)
-% FIND_SORTED_INDICES Finds sorted indices of channels based on desired order
+function [sortedIndices] = Find_Missed_Channels (eegRemainingChannelLabels,desiredOrder)
+% FIND_SORTED_INDICES Identifies indices in EEG channel labels matching a desired order.
 %
-% This function finds the indices of channels in the desired order, even if the direct match is not found.
-
-sortedIndices = []; %sometimes the ismemeber does not work, so we go through this loop to find the indices based on our desired order
-k = 1;
-for i = 1: numel(desiredOrder)
-    lower_desiredOrder = lower(desiredOrder{i});
-    for j = 1:numel(EEG_remaining_channel_labels)
-        original_chan_label = lower(EEG_remaining_channel_labels{j});
-        if contains(original_chan_label,lower_desiredOrder)
-            sortedIndices(1,k) = j;
-            k = k+1; %%for checking contanins put a pause excecution here
-        end
-    end
-end
-
-
-end
-
-
-
-function [outputChannelNames] = Replace_Channel_Names (originalChannelNames, channelsToBeReplace, replacement_channel)
-% REPLACE_CHANNEL_NAMES Replaces specified channel names with new names
-%
-% This function replaces any occurrence of specified channels with a new name.
-
-for j = 1:length(channelsToBeReplace)
-
-    % checks if any of the possible other names of the channels that
-    % should be replaced exists in the channel names
-    if any(strcmp(originalChannelNames, channelsToBeReplace{j}))
-        % replaces that channels with the defined  channel name
-        if sum(strcmp(originalChannelNames, channelsToBeReplace{j})) ==1
-            originalChannelNames{strcmp(originalChannelNames, channelsToBeReplace{j})} = replacement_channel;
-        else
-
-            IdxToBeReplaced =  find(strcmp(originalChannelNames, channelsToBeReplace{j}));
-            for i = 1:length(IdxToBeReplaced)
-                originalChannelNames{IdxToBeReplaced(i)} = replacement_channel;
-            end
-        end
-    end
-
-end
-
-outputChannelNames = originalChannelNames;
-
-end
-
-function [newLabel,channelCounters] = Count_Channels(channelLabel, channelCounters)
-
-% STANDARDIZECHANNELNAME Renames EEG channels to ensure standardized naming conventions.
-%
-% This function adjusts channel names to add numerical suffixes to duplicate channels,
-% ensuring that each channel has a unique name. For main EEG channels like 'O1', 'O2', and 'Fz',
-% the base name is preserved for the first occurrence without adding a numerical suffix.
+% This function searches for and identifies the indices of EEG channels
+% that match a specified desired order. It allows for flexibility by matching based on substring presence
+% (case-insensitive) rather than direct string equality.
 %
 % Inputs:
-%   channelLabel - The original label of the EEG channel.
-%   channelCounters - A struct containing counters for each channel type
-%                     (e.g., 'EMG',0, 'EKG',0, 'Fz', 1, 'O1', 1, 'O2', 0),
-%                       which tracks the number of occurrences of each channel type.
+%   EEG_remaining_channel_labels - A cell array of EEG channel labels still available for sorting.
+%   desiredOrder - A cell array specifying the order of channels desired for analysis or presentation.
 %
 % Outputs:
-%   newLabel - The standardized channel label. If the channel is a duplicate,
-%              it includes a number suffix (e.g., 'EMG1', 'EMG2').
-%   channelCounters - Updated struct with the incremented counters for each channel type.
+%   sortedIndices - A vector of indices indicating the positions within EEG_remaining_channel_labels
+%                   of channels that match the desired order.
 
+% Initialize an empty array to hold sorted indices
+sortedIndices = []; 
 
+% Initialize a counter for placing found indices
+k = 1;
 
-% Define the channel names of interest
-channelNames = {'EMG', 'EKG', 'Fz', 'O1', 'O2'};
+% Iterate over each desired channel name in the specified order
+for i = 1: numel(desiredOrder)
+    % Convert the desired order name to lowercase for case-insensitive comparison
+    lowerDesiredOrder = lower(desiredOrder{i});
 
-% Loop through each channel name to check if the current label matches any known types
-for i = 1:length(channelNames)
-    channelName = channelNames{i};
+    % Iterate over each remaining EEG channel label
+    for j = 1:numel(eegRemainingChannelLabels)
+        originalChanLabel = lower(eegRemainingChannelLabels{j});
 
-    if contains(channelLabel,channelName)
-        % Update the counter for the channel
-        channelCounters.(channelName) = channelCounters.(channelName) + 1;
-        % For the main EEG channels ('O1', 'O2', 'Fz'), preserve the
-        % base name without adding a
-        % number for the first encounter, as they are standard electrode names
-        if (strcmp(channelName,'O1') || strcmp(channelName,'O2') ||strcmp(channelName,'Fz')) && channelCounters.(channelName) == 1
-            newLabel = channelName; % Preserve the base name without number for the first instance
-        else
-            % Append a numeral suffix for duplicate or non-main channels
-            newLabel = [channelName num2str(channelCounters.(channelName))];
+        % Check if the current EEG channel label contains the desired substring
+        if contains(originalChanLabel,lowerDesiredOrder)
+            sortedIndices(1,k) = j; % Record the index of the matching channel
+            k = k+1; % Increment the placement counter
         end
-        return;
     end
 end
-% Return the unchanged label if no matching channel name is found
-newLabel = channelLabel;
-
 
 
 end
@@ -338,7 +257,7 @@ end
 
 
 
-function Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,parentPath,channelInfoFileName)
+function Save_Channel_Changes_Info(originalChannelOrder,desiredChannelOrder,edfFileName,includedChannelIndices,includedChannelLabels,pathToSaveReport,channelInfoFileName)
 % Create a cell array to store channel information
 numChannels = length(originalChannelOrder);
 channelInfo = cell(3,1 + numChannels); % 3 rows: Original Name, New Name, Reordered Name
@@ -367,15 +286,15 @@ for i = 1:length(originalChannelOrder)
     end
 end
 
-% Define path to Excel sheet as a .mat file
-excelSheetPath = fullfile(parentPath, strcat(channelInfoFileName, '.mat'));
+% Define path to save the report as a .mat file
+reportPath = fullfile(pathToSaveReport, strcat(channelInfoFileName, '.mat'));
 
 % Load existing channel information if the file exists
-if isfile(excelSheetPath)
+if isfile(reportPath)
 
 
     % Load existing data
-    existingData = load(excelSheetPath);
+    existingData = load(reportPath);
     existingChannelInfo = existingData.channelInfo;
 
     previousEDFnames = existingChannelInfo(:,1);
@@ -385,14 +304,14 @@ if isfile(excelSheetPath)
 
     % finding if this current edf has already been processed and the info
     % has been saved inthe ecel sheet. If this info is already availabe
-    % in the excel sheet, remove that edf and an other edf after that,
+    % in the report mat file, remove that edf and an other edf after that,
     % because the rest of the files will be processed again
 
     % TODO : right now, if there is a file, with the same name as it is in
     % the input, it will load that file, and if it does not find a matching
     % name, it will keep everything, but maybe, some EDFs have been skipped
     % before, and now that we are processing them, they will be done again
-    % (imagin that the excel sheet has only info on the 3rd edf in a file,
+    % (imagin that the report mat file has only info on the 3rd edf in a file,
     % and we start the process from begining, at fisrt, because the fisrt 
     % edf is beign processed, it cannot find the name of the 3rd one, and
     % does the process, until it reaches the third one, then it will remove
@@ -407,8 +326,8 @@ if isfile(excelSheetPath)
 end
    
 
-    % Write the data to a new Excel file
-    save(excelSheetPath,'channelInfo');
+    % Write the data to a new report mat file
+    save(reportPath,'channelInfo');
 end
 
 
