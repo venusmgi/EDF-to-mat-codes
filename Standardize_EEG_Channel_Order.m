@@ -130,7 +130,7 @@ channelCounters = struct('EMG', 0, 'EKG', 0, 'Fz', 0, 'O1', 0, 'O2', 0);
 
 % Iterate through the channel names to standardize and count them
 for i = 1:length(originalChannelLabels)
-    [originalChannelLabels{i},channelCounters] = standardizeChannelName(originalChannelLabels{i}, channelCounters);
+    [originalChannelLabels{i},channelCounters] = Count_Channels(originalChannelLabels{i}, channelCounters);
 end
 
 
@@ -265,7 +265,7 @@ outputChannelNames = originalChannelNames;
 
 end
 
-function [newLabel,channelCounters] = standardizeChannelName(channelLabel, channelCounters)
+function [newLabel,channelCounters] = Count_Channels(channelLabel, channelCounters)
 
 % STANDARDIZECHANNELNAME Renames EEG channels to ensure standardized naming conventions.
 %
