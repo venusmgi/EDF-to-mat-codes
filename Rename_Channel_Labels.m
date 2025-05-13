@@ -6,8 +6,12 @@ function [outputChannelNames] = Rename_Channel_Labels(originalChannelLabels,chan
 %
 % Inputs:
 %   originalChannelLabels - A cell array containing the original labels of the EEG channels.
-%   channelsToBeReplaced - A cell array of channel names to replace in the original labels.
-%   newChannelNames - A cell array with new names corresponding to each channel name to be replaced.
+%   channelsToBeReplaced - A cell array of channel names to replace in the
+%   original labels. (optional, if this is inputted the newChannelNames 
+%   should also be an input)
+%   newChannelNames - A cell array with new names corresponding to each
+%   channel name to be replaced. (optional, if this is inputted the newChannelNames
+%   should also be an input)
 %
 % Outputs:
 %   outputChannelNames - A cell array containing updated channel names.
@@ -16,19 +20,20 @@ function [outputChannelNames] = Rename_Channel_Labels(originalChannelLabels,chan
 
 %% Step 1: Replace specified channels with the provided new names
 
-% Verify that the number of channels to be replaced matches the number of new names
-assert(length(channelsToBeReplaced)==length(newChannelNames),...
-    'Number of channels to be replaced (%d) must match number of new names (%d)',...
-    length(channelsToBeReplaced), length(newChannelNames));
+if nargin > 1
+    % Verify that the number of channels to be replaced matches the number of new names
+    assert(length(channelsToBeReplaced)==length(newChannelNames),...
+        'Number of channels to be replaced (%d) must match number of new names (%d)',...
+        length(channelsToBeReplaced), length(newChannelNames));
 
-%change the channle names 
-    if ~isempty(channelsToBeReplaced) && ~isempty(newChannelNames)
-        for i = 1:length(channelsToBeReplaced)
-            chanName = channelsToBeReplaced{i};
-            newChanName = newChannelNames{i};
-            originalChannelLabels = Replace_Channel_Names(originalChannelLabels, chanName, newChanName);
-        end
+    %change the channle names
+    for i = 1:length(channelsToBeReplaced)
+        chanName{1} = channelsToBeReplaced{i}; %added {1} to make sure I am passing a cell
+        newChanName= newChannelNames{i}; % this should be a character
+        originalChannelLabels = Replace_Channel_Names(originalChannelLabels, chanName, newChanName);
     end
+end
+
 
 %% Step 2: Map all remaining channels to standardized names
 % Define potential names and their standardized replacements for various channel types
@@ -76,25 +81,22 @@ function [outputChannelNames] = Replace_Channel_Names (originalChannelNames, cha
 %   originalChannelNames - A cell array of the channel names to process.
 %   channelsToBeReplace - A cell array of channel names that should be replaced.
 %   replacement_channel - The new name to assign to each matching channel.
+%   a string of characters
 %
 % Outputs:
 %   outputChannelNames - Modified cell array of channel names with replacements applied.
 
 for j = 1:length(channelsToBeReplace)
+    channelName = channelsToBeReplace{j};
 
     % checks if any of the possible other names of the channels that
     % should be replaced exists in the channel names
-    if any(strcmp(originalChannelNames, channelsToBeReplace{j}))
+    if any(strcmp(originalChannelNames, channelName))
         % replaces that channels with the defined  channel name
-        if sum(strcmp(originalChannelNames, channelsToBeReplace{j})) ==1
-            originalChannelNames{strcmp(originalChannelNames, channelsToBeReplace{j})} = replacementChannelName;
-        else
+            %find the indices of the matched channel
+            IdxToBeReplaced = strcmp(originalChannelNames, channelName);
+            originalChannelNames{IdxToBeReplaced} = replacementChannelName;
 
-            IdxToBeReplaced =  find(strcmp(originalChannelNames, channelsToBeReplace{j}));
-            for i = 1:length(IdxToBeReplaced)
-                originalChannelNames{IdxToBeReplaced(i)} = replacementChannelName;
-            end
-        end
     end
 
 end
