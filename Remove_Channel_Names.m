@@ -31,8 +31,9 @@ channelsToBeRemoved = {'SpO2','SpO2Org','etCO2','CO2Wave','CO2WaveOrg',...
     'LEMG1','LEMG2','LEMG3','LEMG4','POLEMG1','POLEMG2',...
     'REMG1','REMG2','REMG3','REMG4'};
 
+
 % Append user-provided channels to remove to the predefined list
-if ~ isempty(removableChannels)
+if nargin > 1
     channelsToBeRemoved = [channelsToBeRemoved removableChannels];
 end
 
