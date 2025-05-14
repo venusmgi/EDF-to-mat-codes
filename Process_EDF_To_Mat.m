@@ -1,5 +1,5 @@
 function Process_EDF_To_Mat (desiredSamplingRate,desiredChannelOrder,removableChannels, channelsToBeReplaced, ...
-    newChannelNames,channInfoName,selectionMode,removeChannels, renameChannels, headerFormat)
+    newChannelNames,channInfoName,removeChannels, renameChannels, headerFormat)
 
 
 % Previously was called Convert_EDFtomat_Desired_Fs_channOrder_outputExcel_replaceChans
@@ -18,14 +18,36 @@ function Process_EDF_To_Mat (desiredSamplingRate,desiredChannelOrder,removableCh
 % - Saves processed data in MAT format
 %
 % Inputs:
-%   desired_sampling_rate - Target sampling rate for the output (Hz)
-%   desired_channel_order - Cell array of channel names in desired order
-%   removable_channels - Cell array of channels to be excluded
-%   channel_tobe_replaced - Cell array of channel names to be replaced
-%   new_channel_names - Cell array of new names for channels to be replaced
-%   chann_info_name - Name for the channel information output file
-%   selection_mode - 'ParentPath' or 'EDF' to specify the processing mode
-%   header_format - 'EEGlab' for EEGlab format, empty for default format
+%   desiredSamplingRate - Target sampling rate for the output (Hz)
+%   desiredChannelOrder - Cell array of channel names in desired order
+%   removableChannels - Cell array of channels to be excluded
+%   channelsToBeReplaced - Cell array of channel names to be replaced
+%   newChannelNames - Cell array of new names for channels to be replaced
+%   channInfoName - Name for the channel information output file
+%   if you chose 'EDF', you can direcly select the EDF files you want to 
+%   convert from any disred path. If you choose'ParentPath', the edf files
+%   should be organized as below:
+%   -Parent folder with a name of your choosing(e.g. 10.CHOC)
+%       -patient folder with a name of your choosing(e.g. 10-0001 (2017))
+%           -a folder named 'diagnosis'
+%              edfs in are(not) in 'diagnosis' folder 
+%           -a folder named'follow up'
+%              edfs in are(not) in 'diagnosis' folder
+%                  
+%   headerFormat - 'EEGlab' for EEGlab format, empty for default format
+%
+%   removeChannels - 'remove' if there is any spesific channel you want to 
+%   remove, input the channel names that you want to remove in 
+%   "removableChannels" If there is no spesific channel, and you input 
+%   'remove' it will automatically remove the channels that are pre-defined 
+%   in "Remove_Channel_Names.m" function.
+%
+%   renameChannels - 'rename' if there is any spesific channel you want to 
+%   rename and input the channel names that you want to rename in 
+%   "channelsToBeReplaced" and their new names in "newChannelNames". 
+%   If there is no spesific channel that you wat to rename and you input
+%  'rename' it will automatically rename the channels that are pre-defined 
+%   in "Rename_Channel_Labels.m " function.
 %
 % Outputs:
 %   Saves processed data as .mat files in the same directory as input files
@@ -45,16 +67,15 @@ functionPath = pwd;
 addpath(functionPath)
 
 % Set default header format if not provided
-if nargin < 10
+if nargin < 9
     headerFormat = '';  % Default value (regular header format)
 end
 
 
-% If selection mode not provided, ask user to choose
-if nargin <7
-    selectionMode = questdlg('Select a processing Mode:', 'Processing Mode', ...
-        'ParentPath', 'EDF','ParentPath');
-end
+%  ask user to choose the batch processing mode of EDF
+ selectionMode = questdlg('Select a processing Mode:', 'Processing Mode', ...
+        'ParentPath', 'EDF(s)','ParentPath');
+
 
 % Process based on selected mode
 switch lower(selectionMode)
@@ -76,18 +97,18 @@ switch lower(selectionMode)
             % Process diagnosis folder
             Process_Folder(ParentPath, patientFolders{i}, 'diagnosis', desiredSamplingRate, ...
                 desiredChannelOrder, removableChannels, channelsToBeReplaced, ...
-                newChannelNames, headerFormat, channInfoName);
+                newChannelNames, channInfoName,removeChannels, renameChannels,headerFormat);
 
             % Process follow-up folder
             Process_Folder(ParentPath, patientFolders{i}, 'follow up', desiredSamplingRate, ...
                 desiredChannelOrder, removableChannels, channelsToBeReplaced, ...
-                newChannelNames, headerFormat, channInfoName);
+                newChannelNames, channInfoName,removeChannels, renameChannels, headerFormat);
         end
 
         fprintf('All files processed successfully.\n');
 
 
-    case 'edf'
+    case 'edf(s)'
 
         % Get EDF file(s) from user
         [fileNames, filePath] = uigetfile('*.edf', 'Select EDF file(s)', 'MultiSelect', 'on');
@@ -157,7 +178,7 @@ end
 
 function Process_Folder(ParentPath, patientFolder, folderType, desiredSamplingRate, ...
     desiredChannelOrder, removableChannels, channelsToBeReplaced, ...
-    newChannelNames, headerFormat, channInfoName)
+    newChannelNames, channInfoName,removeChannels, renameChannels, headerFormat)
     % This helper function processes all EDF files in a specified folder (diagnosis or follow-up)
     % and converts them to MAT format with the specified parameters.
     %
