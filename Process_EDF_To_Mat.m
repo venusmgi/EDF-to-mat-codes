@@ -1,8 +1,9 @@
 function Process_EDF_To_Mat (desiredSamplingRate,desiredChannelOrder,removableChannels, channelsToBeReplaced, ...
-    newChannelNames,channInfoName,selectionMode, headerFormat)
+    newChannelNames,channInfoName,selectionMode,removeChannels, renameChannels, headerFormat)
 
 
 % Previously was called Convert_EDFtomat_Desired_Fs_channOrder_outputExcel_replaceChans
+% then was renamed to Convert_and_Standerdize_EDF_to_MAT
 % This function processes EDF files in two modes:
 % 1. ParentPath mode: Processes all EDF files in a parent directory structure
 %    (diagnosis and follow-up folders for each patient)
@@ -44,7 +45,7 @@ functionPath = pwd;
 addpath(functionPath)
 
 % Set default header format if not provided
-if nargin < 8
+if nargin < 10
     headerFormat = '';  % Default value (regular header format)
 end
 
@@ -106,7 +107,7 @@ switch lower(selectionMode)
             fprintf('Processing file %d%d: %s',i,length(fileNames),fileNames{i})
 
             EDF_To_Mat_With_Channel_Standardizing (filePath,fileNames{i},desiredSamplingRate,desiredChannelOrder, ...
-                removableChannels,channelsToBeReplaced, newChannelNames,headerFormat,filePath,channInfoName)
+                removableChannels,channelsToBeReplaced, newChannelNames,filePath,channInfoName,removeChannels,renameChannels,headerFormat)
 
         end
 
@@ -207,7 +208,7 @@ function Process_Folder(ParentPath, patientFolder, folderType, desiredSamplingRa
     
         EDF_To_Mat_With_Channel_Standardizing(folder_path, edf_name, desiredSamplingRate, ...
             desiredChannelOrder, removableChannels, channelsToBeReplaced, ...
-            newChannelNames, headerFormat, ParentPath, channInfoName);
+            newChannelNames, ParentPath, channInfoName, removeChannels, renameChannels, headerFormat);
     
     
     end
