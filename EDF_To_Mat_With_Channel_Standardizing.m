@@ -1,7 +1,9 @@
 function EDF_To_Mat_With_Channel_Standardizing (filePath,fileName,desiredSamplingRate,desiredChannelOrder,removableChannels,channelsToBeReplaced, ...
     newChannelNames,pathToSaveChannelInfo,channelReportFileName,removeChannels, renameChannels,headerFormat)
-% previously called CONVERT_EDF2MAT
-% CONVERT_EDF2MAT Converts an EDF file to MAT format with specified parameters
+% Previously called CONVERT_EDF2MAT
+% This function calls other functions named "edfreadUntilDone.m",
+% "Remove_Channel_Names.m", "Rename_Channel_Labels.m",
+% "Resolve_Channel_Duplicate.m", and "Save_Channel_Changes_Info.m".
 %
 % This function reads an EDF file, processes it according to the specified parameters,
 % and saves the results in MAT format.
@@ -16,6 +18,17 @@ function EDF_To_Mat_With_Channel_Standardizing (filePath,fileName,desiredSamplin
 %   new_channel_names - Cell array of new names for channels to be replaced
 %   header_format - 'EEGlab' for EEGlab format, empty for default format
 %   chann_info_name - Name for the channel information output file
+%   removeChannels - 'remove' if there is any spesific channel you want to 
+%   remove, input the channel names that you want to remove in 
+%   "removableChannels" If there is no spesific channel, and you input 
+%   'remove' it will automatically remove the channels that are pre-defined 
+%   in "Remove_Channel_Names.m" function.
+%   renameChannels - 'rename' if there is any spesific channel you want to 
+%   rename and input the channel names that you want to rename in 
+%   "channelsToBeReplaced" and their new names in "newChannelNames". 
+%   If there is no spesific channel that you wat to rename and you input
+%  'rename' it will automatically rename the channels that are pre-defined 
+%   in "Rename_Channel_Labels.m " function.
 
 
 
