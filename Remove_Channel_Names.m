@@ -1,4 +1,4 @@
-function [outPutChannelNames] = Remove_Channel_Names  (originalChannelOrder,removableChannels)
+function [outPutChannelNames] = Remove_Channel_Names (originalChannelOrder,removableChannels)
 
 % REMOVE_CHANNEL_NAMES Marks specific EEG channels for removal based on a
 % predefined set of channels. Either inputted by the user, or the ones that
