@@ -38,21 +38,25 @@ end
 %% Step 2: Map all remaining channels to standardized names
 % Define potential names and their standardized replacements for various channel types
 
-    channelMappings = {'Eye1',{'LUO','EEGPOLLUO','POLEOGL','POLLLC','POLLOC','EEGLOCRef', 'LOC','EOGL','LLC', 'LUE','LUOC','Reye','POLLLE',...
-        'LEYE','LIO','EEGLEYERef','LOF','LEOG','POLLLE','POLLUE','LLE','EOGLT'};
+
+        channelMappings = {'Eye1',{'LUO','EEGPOLLUO','POLEOGL','POLLLC','POLLOC','EEGLOCRef', 'LOC','EOGL','LLC', 'LUE','LUOC','Reye','POLLLE',...
+                                   'LEYE','LIO','EEGLEYERef','LOF','LEOG','POLLLE','POLLUE','LLE','EOGLT'};
         'Eye2',{'RLO','EEGPOLRLO','POLEOGR','POLROC','EEGROCRef','EOGR','ROC','RAE','RUE','RLOC','Leye','POLRUE','REYE','RIO',...
-        'EEGREYERef','ROF','REOG','POLRUE','POLRLE','EOGRT'};
-        'EKG1',{'ECGL','ECG1','ecg1','EKGL','LEKG','EEGLEKGRef','ECGLA','EEGECGLRef','EKGLT'};
-        'EKG2',{'ECGR','ECG2','ecg2','EKGR','REKG','EEGREKGRef','ECGRA','EEGECGRRef','EKGRT'};
-        'EKG',{'ECG','EEGEKGRef','POLEKG','EEGPOLEKG'};
+                'EEGREYERef','ROF','REOG','POLRUE','POLRLE','EOGRT'};
+        'EKG',{'EKG1','ECGL','ECG1','ecg1','EKGL','LEKG','EEGLEKGRef','ECGLA','EEGECGLRef','EKGLT',... %these are called EKG1 usually
+               'EKG2','ECGR','ECG2','ecg2','EKGR','REKG','EEGREKGRef','ECGRA','EEGECGRRef','EKGRT',...%these are called EKG2 usually
+               'ECG','EEGEKGRef','POLEKG','EEGPOLEKG'};
         'EMG',{'CHIN1','CHIN2','NECK1','NECK2','NEC1','NEC2','Lleg1','Lleg2','Rleg1','Rleg2','chin','EEGNeckRef','POLNeck1',...
-        'POLNeck2','neck1','neck2','LEMG1','REMG1','EEGCHIN1Ref','EEGCHIN2Ref','POLNECK1','POLNECK2','POLChin1','POLChin2','RLEG',...
-        'LLEG','EMGR','EMGL','ABD1','ABD2','EEGABD1Ref','EEGABD2Ref','CHINLT','CHINRT','ABDBLK','ABDWHT','UCHIN','LCHIN'};
+               'POLNeck2','neck1','neck2','LEMG1','REMG1','EEGCHIN1Ref','EEGCHIN2Ref','POLNECK1','POLNECK2','POLChin1',...
+               'POLChin2','RLEG','LLEG','EMGR','EMGL','ABD1','ABD2','EEGABD1Ref','EEGABD2Ref','CHINLT','CHINRT','ABDBLK',...
+               'ABDWHT','UCHIN','LCHIN'};
         'T3',{'T7','EEGT7Ref'};
         'T4',{'T8','EEGT8Ref'};
         'T5',{'P7','EEGP7Ref'} ;
         'T6', {'P8','EEGP8Ref'}
         };
+
+
     
     % Apply the channel mappings to standardize channel names
     for k = 1:length(channelMappings)
